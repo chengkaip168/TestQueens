@@ -52,6 +52,62 @@ const STATUS_STYLE: Record<string, string> = {
 function stripPrefix(s: string) { return s.replace(/^[A-Ha-h][).:\s]\s*/, ""); }
 const LETTERS = ["A", "B", "C", "D"];
 
+// ── Filter + export helpers ───────────────────────────────────────────────────
+
+// The packet is the UID segment before the first underscore: "23A_Q5" -> "23A",
+// "STA_Q1" -> "STA", "ai_Q12" -> "ai". It cannot come from all_questions.source,
+// which only ever holds bank / ai / STA–STD — never a year code like 23A.
+function packetOf(uid: string | null): string {
+  if (!uid) return "";
+  const i = uid.indexOf("_");
+  return i === -1 ? uid : uid.slice(0, i);
+}
+
+// "2026-09" — sortable key; label is rendered separately.
+function monthKeyOf(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function monthLabel(key: string): string {
+  const [y, m] = key.split("-");
+  return new Date(Number(y), Number(m) - 1, 1)
+    .toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+// RFC 4180: quote a field when it holds a comma, quote, CR or LF; double any
+// internal quotes. Question text and student notes routinely contain all four,
+// so skipping this corrupts the row alignment.
+function csvEscape(v: unknown): string {
+  const s = v === null || v === undefined ? "" : String(v);
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+type ExportRow = Report & { q?: { text: string; sub_category: string | null; answer: string } };
+
+const EXPORT_FIELDS: { key: string; label: string; get: (r: ExportRow) => string }[] = [
+  { key: "created_at",    label: "Date",           get: r => new Date(r.created_at).toLocaleString("en-US") },
+  { key: "student",       label: "Student",        get: r => (r.first_name && r.last_name) ? `${r.first_name} ${r.last_name}` : "" },
+  { key: "test_name",     label: "Test type",      get: r => r.test_name ?? "" },
+  { key: "packet",        label: "Test packet",    get: r => packetOf(r.question_uid) },
+  { key: "order_index",   label: "Question #",     get: r => r.order_index == null ? "" : String(r.order_index) },
+  { key: "question_uid",  label: "Question ID",    get: r => r.question_uid ?? "" },
+  { key: "question_text", label: "Question text",  get: r => r.q?.text ?? "" },
+  { key: "sub_category",  label: "Topic",          get: r => r.q?.sub_category ? fmtSubEN(r.q.sub_category) : "" },
+  { key: "answer",        label: "Correct answer", get: r => r.q?.answer ?? "" },
+  { key: "reason",        label: "Reason",         get: r => REASON_LABEL[r.reason] ?? r.reason },
+  { key: "description",   label: "Student note",   get: r => r.description ?? "" },
+  { key: "status",        label: "Status",         get: r => r.status },
+  { key: "report_id",     label: "Report ID",      get: r => r.id },
+];
+
+// Fields that require a join to all_questions — the reports table has none of them.
+const QUESTION_FIELDS = new Set(["question_text", "sub_category", "answer"]);
+
+const DEFAULT_EXPORT_FIELDS = new Set([
+  "created_at", "student", "test_name", "packet",
+  "question_uid", "question_text", "reason", "description", "status",
+]);
+
 // ── Question preview card ──────────────────────────────────────────────────────
 
 function QuestionPreviewCard({
@@ -191,6 +247,17 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
   // Per-row confirm-delete log
   const [confirmDeleteLog, setConfirmDeleteLog] = useState<string | null>(null);
 
+  // Filters
+  const [filterMonth, setFilterMonth]       = useState("all");
+  const [filterTestType, setFilterTestType] = useState("all");
+  const [filterPacket, setFilterPacket]     = useState("all");
+  const [filterReason, setFilterReason]     = useState("all");
+
+  // CSV export
+  const [exportOpen, setExportOpen]   = useState(false);
+  const [exportFields, setExportFields] = useState<Set<string>>(new Set(DEFAULT_EXPORT_FIELDS));
+  const [exporting, setExporting]     = useState(false);
+
   const fetchReports = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -324,7 +391,77 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
 
   // ── Derived state ──────────────────────────────────────────────────────────
 
-  const visible = filterStatus === "all" ? reports : reports.filter((r) => r.status === filterStatus);
+  // Option lists are built from the data actually present, so a filter can
+  // never offer a value that would return nothing.
+  const monthOptions = [...new Set(reports.map(r => monthKeyOf(r.created_at)))].sort().reverse();
+  const testTypeOptions = [...new Set(reports.map(r => r.test_name).filter(Boolean))].sort() as string[];
+  const packetOptions = [...new Set(reports.map(r => packetOf(r.question_uid)).filter(Boolean))].sort();
+  const reasonOptions = [...new Set(reports.map(r => r.reason))].sort();
+
+  const visible = reports.filter(r =>
+    (filterStatus   === "all" || r.status === filterStatus) &&
+    (filterMonth    === "all" || monthKeyOf(r.created_at) === filterMonth) &&
+    (filterTestType === "all" || r.test_name === filterTestType) &&
+    (filterPacket   === "all" || packetOf(r.question_uid) === filterPacket) &&
+    (filterReason   === "all" || r.reason === filterReason)
+  );
+
+  const activeFilterCount =
+    (filterMonth    !== "all" ? 1 : 0) +
+    (filterTestType !== "all" ? 1 : 0) +
+    (filterPacket   !== "all" ? 1 : 0) +
+    (filterReason   !== "all" ? 1 : 0);
+
+  function clearFilters() {
+    setFilterMonth("all"); setFilterTestType("all");
+    setFilterPacket("all"); setFilterReason("all");
+  }
+
+  // ── CSV export ─────────────────────────────────────────────────────────────
+
+  async function exportCsv() {
+    const cols = EXPORT_FIELDS.filter(f => exportFields.has(f.key));
+    if (cols.length === 0 || visible.length === 0) return;
+    setExporting(true);
+
+    // Question text / topic / answer live in all_questions, not in the reports
+    // table — fetch them only when one of those columns was actually selected.
+    const rows: ExportRow[] = visible.map(r => ({ ...r }));
+    if (cols.some(c => QUESTION_FIELDS.has(c.key))) {
+      const uids = [...new Set(rows.map(r => r.question_uid).filter(Boolean))] as string[];
+      const qMap: Record<string, { text: string; sub_category: string | null; answer: string }> = {};
+      // Chunked: a single .in() with hundreds of ids overruns the request URL.
+      for (let i = 0; i < uids.length; i += 150) {
+        const { data } = await supabase
+          .from("all_questions")
+          .select("uid, text, sub_category, answer")
+          .in("uid", uids.slice(i, i + 150));
+        for (const q of data ?? []) qMap[q.uid] = q;
+      }
+      for (const r of rows) if (r.question_uid) r.q = qMap[r.question_uid];
+    }
+
+    const csv = [
+      cols.map(c => csvEscape(c.label)).join(","),
+      ...rows.map(r => cols.map(c => csvEscape(c.get(r))).join(",")),
+    ].join("\r\n");
+
+    // Leading BOM so Excel reads it as UTF-8 — without it, em dashes and
+    // curly quotes in question text arrive mojibaked.
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
+    a.download = `question-reports-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    setExporting(false);
+    setExportOpen(false);
+  }
+
   const counts = {
     pending:  reports.filter((r) => r.status === "pending").length,
     reviewed: reports.filter((r) => r.status === "reviewed").length,
@@ -361,7 +498,107 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
               {counts.pending} pending · {counts.reviewed} reviewed · {counts.resolved} resolved
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setExportOpen(o => !o)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs sm:text-sm font-semibold transition-colors shrink-0"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export CSV
+          </button>
         </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={filterMonth} onChange={e => setFilterMonth(e.target.value)} title="Filter by month"
+            className="px-2 py-1 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-700 focus:outline-none focus:border-amber-500/60"
+          >
+            <option value="all">All months</option>
+            {monthOptions.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+          </select>
+
+          <select
+            value={filterTestType} onChange={e => setFilterTestType(e.target.value)} title="Filter by test type"
+            className="px-2 py-1 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-700 focus:outline-none focus:border-amber-500/60"
+          >
+            <option value="all">All test types</option>
+            {testTypeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+
+          <select
+            value={filterPacket} onChange={e => setFilterPacket(e.target.value)} title="Filter by test packet"
+            className="px-2 py-1 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-700 focus:outline-none focus:border-amber-500/60"
+          >
+            <option value="all">All packets</option>
+            {packetOptions.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+
+          <select
+            value={filterReason} onChange={e => setFilterReason(e.target.value)} title="Filter by reason"
+            className="px-2 py-1 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-700 focus:outline-none focus:border-amber-500/60"
+          >
+            <option value="all">All reasons</option>
+            {reasonOptions.map(r => <option key={r} value={r}>{REASON_LABEL[r] ?? r}</option>)}
+          </select>
+
+          {activeFilterCount > 0 && (
+            <button type="button" onClick={clearFilters}
+              className="text-xs sm:text-sm text-zinc-400 hover:text-zinc-700 underline underline-offset-2">
+              Clear {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""}
+            </button>
+          )}
+          <span className="text-xs sm:text-sm text-zinc-400 ml-auto">
+            {visible.length} of {reports.length} shown
+          </span>
+        </div>
+
+        {/* Export panel */}
+        {exportOpen && (
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-zinc-800">Columns to include</p>
+              <div className="flex gap-2 text-xs">
+                <button type="button" onClick={() => setExportFields(new Set(EXPORT_FIELDS.map(f => f.key)))}
+                  className="text-zinc-500 hover:text-zinc-900 underline underline-offset-2">Select all</button>
+                <button type="button" onClick={() => setExportFields(new Set(DEFAULT_EXPORT_FIELDS))}
+                  className="text-zinc-500 hover:text-zinc-900 underline underline-offset-2">Reset</button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-1.5">
+              {EXPORT_FIELDS.map(f => (
+                <label key={f.key} className="flex items-center gap-2 text-xs sm:text-sm text-zinc-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={exportFields.has(f.key)}
+                    onChange={() => setExportFields(s => {
+                      const n = new Set(s);
+                      n.has(f.key) ? n.delete(f.key) : n.add(f.key);
+                      return n;
+                    })}
+                    className="w-3.5 h-3.5 rounded border-zinc-300 text-blue-500 cursor-pointer"
+                  />
+                  {f.label}
+                </label>
+              ))}
+            </div>
+            <div className="flex items-center gap-3 pt-0.5">
+              <button
+                type="button"
+                onClick={exportCsv}
+                disabled={exporting || exportFields.size === 0 || visible.length === 0}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {exporting ? "Preparing…" : `Download ${visible.length} report${visible.length === 1 ? "" : "s"}`}
+              </button>
+              <span className="text-xs text-zinc-400">
+                {exportFields.size} column{exportFields.size === 1 ? "" : "s"} · respects the filters above
+              </span>
+            </div>
+          </div>
+        )}
         <div className="flex gap-1.5 flex-wrap">
           {(["all", "pending", "reviewed", "resolved"] as const).map((s) => (
             <button key={s} type="button" onClick={() => setFilterStatus(s)}
@@ -413,7 +650,19 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
         ) : visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 gap-2">
             <p className="text-base font-medium text-zinc-500">No reports found</p>
-            <p className="text-sm text-zinc-400">Reports submitted by students will appear here</p>
+            {reports.length > 0 ? (
+              <>
+                <p className="text-sm text-zinc-400">
+                  {reports.length} report{reports.length === 1 ? " is" : "s are"} hidden by the current filters
+                </p>
+                <button type="button" onClick={() => { clearFilters(); setFilterStatus("all"); }}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium underline underline-offset-2">
+                  Clear all filters
+                </button>
+              </>
+            ) : (
+              <p className="text-sm text-zinc-400">Reports submitted by students will appear here</p>
+            )}
           </div>
         ) : (
           <table className="w-full text-base border-collapse">

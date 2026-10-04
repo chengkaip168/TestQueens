@@ -644,6 +644,8 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
   const [filterType, setFilterType] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterSource, setFilterSource] = useState("");
+  const [filterPacket, setFilterPacket] = useState("");
+  const [packets, setPackets] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -683,6 +685,33 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     });
   }, []);
 
+  // Build the packet list from the UIDs themselves. It cannot come from the
+  // `source` column, which only holds bank / ai / STA–STD — never a year code
+  // like 23B or 25A, since those questions are all filed under "bank".
+  // Paged because PostgREST caps a single response at 1000 rows, and the bank
+  // is larger than that, so one request would silently miss later packets.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const found = new Set<string>();
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase
+          .from("all_questions")
+          .select("uid")
+          .order("uid")
+          .range(from, from + 999);
+        if (error || !data || data.length === 0) break;
+        for (const r of data as { uid: string }[]) {
+          const i = r.uid.indexOf("_");
+          if (i > 0) found.add(r.uid.slice(0, i));
+        }
+        if (data.length < 1000) break;
+      }
+      if (!cancelled) setPackets([...found].sort());
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const fetchPendingCount = useCallback(async () => {
     const { count } = await supabase
       .from("all_questions")
@@ -706,6 +735,10 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     if (filterType)     q = q.eq("type", filterType);
     if (filterCategory) q = q.eq("sub_category", filterCategory);
     if (filterSource)   q = q.eq("source", filterSource);
+    // Prefix match on the UID. The underscore is escaped because it is a
+    // single-character wildcard in SQL LIKE — unescaped, "23B_%" would also
+    // match a UID like "23BX…".
+    if (filterPacket)   q = q.like("uid", `${filterPacket}\\_%`);
     if (filterStatus)   q = q.eq("status", filterStatus);
     if (search.trim())  q = q.or(`uid.ilike.%${search.trim()}%,text.ilike.%${search.trim()}%`);
 
@@ -726,7 +759,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     }
     setLoading(false);
     fetchPendingCount();
-  }, [page, filterSubject, filterType, filterCategory, filterSource, filterStatus, search, fetchPendingCount]);
+  }, [page, filterSubject, filterType, filterCategory, filterSource, filterPacket, filterStatus, search, fetchPendingCount]);
 
   async function approveQuestion(uid: string) {
     const { data, error } = await supabase
@@ -1317,15 +1350,21 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
           )}
         </div>
 
+        <select title="Filter by test packet" value={filterPacket} onChange={e => { setFilterPacket(e.target.value); setPage(0); }}
+          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none transition-colors ${filterPacket ? "border-amber-500/60 text-zinc-900" : "border-zinc-300 text-zinc-600"}`}>
+          <option value="">All Packets</option>
+          {packets.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+
         <select title="Filter by topic" value={filterCategory} onChange={e => { setFilterCategory(e.target.value); setPage(0); }}
           className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none transition-colors ${filterCategory ? "border-amber-400 text-amber-700 bg-amber-50 focus:border-amber-500" : "border-zinc-200 text-zinc-600 focus:border-amber-500/40"}`}>
           <option value="">All Topics</option>
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
 
-        {(filterSubject || filterType || filterSource || filterStatus || filterCategory || search) && (
+        {(filterSubject || filterType || filterSource || filterPacket || filterStatus || filterCategory || search) && (
           <button type="button" onClick={() => {
-            setFilterSubject(""); setFilterType(""); setFilterSource("");
+            setFilterSubject(""); setFilterType(""); setFilterSource(""); setFilterPacket("");
             setFilterStatus(""); setFilterCategory(""); setSearch(""); setSearchInput(""); setPage(0);
           }}
             className="shrink-0 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-300 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap">
