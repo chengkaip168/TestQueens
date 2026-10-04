@@ -646,6 +646,10 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
   const [filterSource, setFilterSource] = useState("");
   const [filterPacket, setFilterPacket] = useState("");
   const [packets, setPackets] = useState<string[]>([]);
+  const [filterMedia, setFilterMedia] = useState<"" | "yes" | "no">("");
+  // question_ids that have at least one row in dictionary_of_media.
+  const [mediaUids, setMediaUids] = useState<Set<string>>(new Set());
+  const [mediaLoaded, setMediaLoaded] = useState(false);
   const [filterStatus, setFilterStatus] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -712,6 +716,32 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     return () => { cancelled = true; };
   }, []);
 
+  // Which questions have media. The source of truth is dictionary_of_media —
+  // the same table the player reads at render time — NOT all_questions.media_refs,
+  // which is empty for the extracted sample tests and null for AI questions.
+  // Presence of a row is all that counts: a broken or 404ing URL still counts
+  // as "has media", which is what was asked for.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const found = new Set<string>();
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase
+          .from("dictionary_of_media")
+          .select("question_id")
+          .order("question_id")
+          .range(from, from + 999);
+        if (error || !data || data.length === 0) break;
+        for (const r of data as { question_id: string | null }[]) {
+          if (r.question_id) found.add(r.question_id);
+        }
+        if (data.length < 1000) break;
+      }
+      if (!cancelled) { setMediaUids(found); setMediaLoaded(true); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const fetchPendingCount = useCallback(async () => {
     const { count } = await supabase
       .from("all_questions")
@@ -740,6 +770,18 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     // match a UID like "23BX…".
     if (filterPacket)   q = q.like("uid", `${filterPacket}\\_%`);
     if (filterStatus)   q = q.eq("status", filterStatus);
+    // Media lives in another table with no FK, so PostgREST cannot embed or
+    // anti-join it. The UID set is resolved up front and applied here, which
+    // keeps .range() paging and the exact count correct — a client-side filter
+    // would only sift the current page and report the unfiltered total.
+    if (filterMedia && mediaLoaded) {
+      const list = [...mediaUids];
+      if (filterMedia === "yes") {
+        q = list.length > 0 ? q.in("uid", list) : q.eq("uid", "\u0000__none__");
+      } else if (list.length > 0) {
+        q = q.not("uid", "in", `(${list.map(u => `"${u}"`).join(",")})`);
+      }
+    }
     if (search.trim())  q = q.or(`uid.ilike.%${search.trim()}%,text.ilike.%${search.trim()}%`);
 
     const { data, count, error } = await q;
@@ -759,7 +801,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     }
     setLoading(false);
     fetchPendingCount();
-  }, [page, filterSubject, filterType, filterCategory, filterSource, filterPacket, filterStatus, search, fetchPendingCount]);
+  }, [page, filterSubject, filterType, filterCategory, filterSource, filterPacket, filterStatus, filterMedia, mediaUids, mediaLoaded, search, fetchPendingCount]);
 
   async function approveQuestion(uid: string) {
     const { data, error } = await supabase
@@ -1350,6 +1392,14 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
           )}
         </div>
 
+        <select title="Filter by media" value={filterMedia} disabled={!mediaLoaded}
+          onChange={e => { setFilterMedia(e.target.value as "" | "yes" | "no"); setPage(0); }}
+          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none transition-colors disabled:opacity-50 ${filterMedia ? "border-amber-500/60 text-zinc-900" : "border-zinc-300 text-zinc-600"}`}>
+          <option value="">All Media</option>
+          <option value="yes">Has media</option>
+          <option value="no">No media</option>
+        </select>
+
         <select title="Filter by test packet" value={filterPacket} onChange={e => { setFilterPacket(e.target.value); setPage(0); }}
           className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none transition-colors ${filterPacket ? "border-amber-500/60 text-zinc-900" : "border-zinc-300 text-zinc-600"}`}>
           <option value="">All Packets</option>
@@ -1362,9 +1412,9 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
 
-        {(filterSubject || filterType || filterSource || filterPacket || filterStatus || filterCategory || search) && (
+        {(filterSubject || filterType || filterSource || filterPacket || filterMedia || filterStatus || filterCategory || search) && (
           <button type="button" onClick={() => {
-            setFilterSubject(""); setFilterType(""); setFilterSource(""); setFilterPacket("");
+            setFilterSubject(""); setFilterType(""); setFilterSource(""); setFilterPacket(""); setFilterMedia("");
             setFilterStatus(""); setFilterCategory(""); setSearch(""); setSearchInput(""); setPage(0);
           }}
             className="shrink-0 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-300 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap">
@@ -1402,6 +1452,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
               <th className="px-4 py-3 text-left text-sm font-bold text-zinc-400 uppercase tracking-widest">Type</th>
               <th className="px-4 py-3 text-left text-sm font-bold text-zinc-400 uppercase tracking-widest">Topic</th>
               <th className="px-4 py-3 text-left text-sm font-bold text-zinc-400 uppercase tracking-widest">Difficulty</th>
+              <th className="px-4 py-3 text-left text-sm font-bold text-zinc-400 uppercase tracking-widest">Media</th>
               <th className="px-4 py-3 text-left text-sm font-bold text-zinc-400 uppercase tracking-widest">Status</th>
               <th className="px-4 py-3 text-left text-sm font-bold text-zinc-400 uppercase tracking-widest w-full">Question</th>
               <th className="px-4 py-3 text-right text-sm font-bold text-zinc-400 uppercase tracking-widest whitespace-nowrap">Actions</th>
@@ -1409,9 +1460,9 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="py-16 text-center text-zinc-400 text-base">Loading…</td></tr>
+              <tr><td colSpan={9} className="py-16 text-center text-zinc-400 text-base">Loading…</td></tr>
             ) : questions.length === 0 ? (
-              <tr><td colSpan={8} className="py-16 text-center text-zinc-400 text-base">No questions match the current filters.</td></tr>
+              <tr><td colSpan={9} className="py-16 text-center text-zinc-400 text-base">No questions match the current filters.</td></tr>
             ) : questions.map(q => (
               <tr key={q.uid} className="border-b border-zinc-100 hover:bg-zinc-50 transition-colors group">
                 <td className="px-4 py-3 font-mono text-sm text-zinc-500 whitespace-nowrap align-top">{q.uid}</td>
@@ -1427,6 +1478,15 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                 </td>
                 <td className="px-4 py-3 font-mono text-sm text-zinc-500 whitespace-nowrap align-top">{q.sub_category ?? "—"}</td>
                 <td className="px-4 py-3 text-sm text-zinc-500 capitalize align-top">{q.difficulty ?? "—"}</td>
+                <td className="px-4 py-3 align-top whitespace-nowrap">
+                  {!mediaLoaded ? (
+                    <span className="text-zinc-300 text-sm">…</span>
+                  ) : mediaUids.has(q.uid) ? (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-600">True</span>
+                  ) : (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-400">False</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 align-top whitespace-nowrap">
                   {q.status === "pending" ? (
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">Pending</span>
