@@ -3,6 +3,43 @@
   command = "npm run build"
   publish = "dist"
 
+# ── Security headers ─────────────────────────────────────────────────────────
+# Applied to every response. These are all enforcing: none of them change what
+# the app may load, only how the browser treats what it already loads.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Clickjacking: the app is never meant to be framed.
+    X-Frame-Options = "DENY"
+    # Stop the browser guessing a MIME type different from the declared one.
+    X-Content-Type-Options = "nosniff"
+    # Send the origin only, and nothing at all when leaving HTTPS.
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Hardware the app never uses.
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    # Force HTTPS for a year, including subdomains. Netlify already redirects
+    # to HTTPS; this stops the first plain-HTTP request from happening at all.
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    # Cross-origin isolation for the document itself.
+    Cross-Origin-Opener-Policy = "same-origin"
+
+    # ── Content Security Policy — REPORT-ONLY on purpose ────────────────────
+    # Report-Only logs violations to the browser console and blocks nothing, so
+    # it cannot take the site down. The directives below were derived from what
+    # the app actually loads:
+    #   script  : the Vite bundle only (index.html has no inline script)
+    #   style   : Google Fonts stylesheet + 'unsafe-inline', which recharts,
+    #             html2canvas and jsPDF require — they set element.style directly
+    #   font    : Google Fonts, plus data: for any inlined face
+    #   img     : Supabase Storage (question media), plus data:/blob: for the
+    #             grain SVG and the html2canvas canvases used by PDF export
+    #   connect : Supabase REST, Auth, Edge Functions and Realtime (wss)
+    # Open the site, exercise login, a mock test, admin media upload and a PDF
+    # export, then check the console. If no violations appear, rename this key
+    # to Content-Security-Policy to start enforcing it.
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://xxiwyxrkdxlstvcqcjkb.supabase.co; connect-src 'self' https://xxiwyxrkdxlstvcqcjkb.supabase.co wss://xxiwyxrkdxlstvcqcjkb.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+
+# Existing MIME-type pins, unchanged.
 [[headers]]
   for = "/*.js"
   [headers.values]

@@ -620,6 +620,12 @@ interface AdminQuestionsPanelProps {
   onReturnToReports?: () => void;
 }
 
+// Media upload limits. SVG is deliberately excluded: it can carry inline
+// script, and these files land in a PUBLIC storage bucket. Every media file
+// currently in the bucket is a PNG, so nothing existing is affected.
+const ALLOWED_MEDIA_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const MAX_MEDIA_BYTES = 10 * 1024 * 1024;   // 10 MB
+
 export default function AdminQuestionsPanel({ initialEditUid, initialReportId, onEditHandled, onReturnToReports }: AdminQuestionsPanelProps = {}) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [total, setTotal] = useState(0);
@@ -1213,6 +1219,25 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
       let content: string | null = null;
 
       if (hasNewFile) {
+        // Validate before uploading. This only rejects files earlier and with a
+        // clearer message — the upload call, the bucket and the path format are
+        // untouched, so every media item that worked before still works.
+        if (!ALLOWED_MEDIA_TYPES.includes(item.file!.type)) {
+          setSaveError(
+            `"${item.file!.name}" is ${item.file!.type || "an unrecognised type"}. ` +
+            `Allowed: PNG, JPEG, WebP or GIF.`
+          );
+          setSaving(false);
+          return;
+        }
+        if (item.file!.size > MAX_MEDIA_BYTES) {
+          setSaveError(
+            `"${item.file!.name}" is ${(item.file!.size / 1024 / 1024).toFixed(1)} MB. ` +
+            `The limit is ${MAX_MEDIA_BYTES / 1024 / 1024} MB.`
+          );
+          setSaving(false);
+          return;
+        }
         const ext = item.file!.name.split(".").pop() ?? "jpg";
         const filePath = `${cleanId}.${ext}`;
         let { error: uploadErr } = await supabase.storage
