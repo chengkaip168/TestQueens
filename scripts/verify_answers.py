@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Verify and fix answers for new SHSAT sample tests A-D (STA/STB/STC/STD).
-Compares DB answers against the official 2026-2027 answer key.
+Compares DB answers against the reference answer key.
 
 Usage:
     set SUPABASE_SERVICE_KEY=<your service key>
@@ -27,12 +27,12 @@ HEADERS = {
     "Content-Type":  "application/json",
 }
 
-# ── Official Answer Key ────────────────────────────────────────────────────────
+# Reference answer key
 # ELA_KEY[test_letter][1-based question number] = canonical answer string
 # MATH_KEY[test_letter][1-based question number] = canonical answer string
 #
 # Multi-select answers stored as sorted comma-separated letters, e.g. "A,C"
-# Free-response stored exactly as printed in the answer key.
+# Free-response stored exactly as it appears in the key.
 
 ELA_KEY = {
     "A": {

@@ -47,7 +47,7 @@ export default function TestTableRow({ id, name, date, completed, score, wasRese
             </span>
           )}
 
-          {/* Reset — only for in-progress non-diagnostic tests */}
+          {/* Reset, only for in-progress non-diagnostic tests */}
           {!completed && !isDiagnostic && onReset && (
             confirmReset ? (
               <div className="flex flex-wrap items-center gap-1.5">

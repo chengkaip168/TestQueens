@@ -34,7 +34,7 @@ export default function MediaDisplay({ mediaItems }: MediaDisplayProps) {
           );
         }
 
-        // graph, table, equation — stored as image URLs
+        // graph, table, equation, stored as image URLs
         return (
           <img
             key={item.media_id}

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useModalBehavior } from "../hooks/useModalBehavior";
 import { supabase } from "../supabase-client";
 import { parseFormattedText } from "../utils/textParser";
 import MediaDisplay from "./mediaDisplay";
@@ -73,9 +74,21 @@ export default function QuestionDetailModal({
   const [reportReason, setReportReason]     = useState("wrong_answer_key");
   const [reportDesc, setReportDesc]         = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportError, setReportError]       = useState(false);
   const [reportDone, setReportDone]         = useState(false);
+  const reportCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useModalBehavior(onClose);
+
+  useEffect(() => () => { if (reportCloseTimer.current) clearTimeout(reportCloseTimer.current); }, []);
+
+  // Reset while the new question loads, otherwise the previous question's text and
+  // correct answer stay on screen under the new question's number.
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setQuestion(null);
+    setMediaItems([]);
     (async () => {
       const [{ data: qData }, { data: mData }] = await Promise.all([
         supabase
@@ -89,16 +102,18 @@ export default function QuestionDetailModal({
           .eq("question_id", questionUid)
           .order("media_id"),
       ]);
+      if (cancelled) return;
       setQuestion(qData as AllQuestion | null);
       setMediaItems((mData as MediaItem[]) ?? []);
       setLoading(false);
     })();
+    return () => { cancelled = true; };
   }, [questionUid]);
 
   async function submitReport() {
     setReportSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from("question_reports").insert([{
+    const { error: reportErr } = await supabase.from("question_reports").insert([{
       user_id:      user?.id ?? null,
       test_id:      testId ?? null,
       question_uid: questionUid,
@@ -109,8 +124,14 @@ export default function QuestionDetailModal({
       status:       "pending",
     }]);
     setReportSubmitting(false);
+    if (reportErr) {
+      console.error("Report submission failed:", reportErr);
+      setReportError(true);
+      return;
+    }
+    setReportError(false);
     setReportDone(true);
-    setTimeout(() => {
+    reportCloseTimer.current = setTimeout(() => {
       setShowReport(false);
       setReportDone(false);
       setReportDesc("");
@@ -169,12 +190,9 @@ export default function QuestionDetailModal({
   return (
     <div
       className="fixed inset-0 bg-black/60 z-60 flex items-center justify-center p-4"
-      onClick={onClose}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-[92vw] flex flex-col overflow-hidden max-h-[95vh]"
-        onClick={e => e.stopPropagation()}
-      >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[95vh]">
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -229,7 +247,7 @@ export default function QuestionDetailModal({
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                 </svg>
-                Report submitted — thank you!
+                Report submitted: thank you!
               </div>
             ) : (
               <>
@@ -261,6 +279,11 @@ export default function QuestionDetailModal({
                   rows={2}
                   className="border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
                 />
+                {reportError && (
+                  <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+                    Couldn't submit the report. Please try again.
+                  </p>
+                )}
               </>
             )}
           </div>
@@ -281,7 +304,7 @@ export default function QuestionDetailModal({
               </div>
             )}
             <div className="p-5 flex flex-col gap-4">
-              {/* For drag fill types — component renders its own text+blanks */}
+              {/* For drag fill types, component renders its own text+blanks */}
               {isDragSingle && (
                 <DragFillSingle
                   text={question.text ?? ""}
@@ -310,7 +333,7 @@ export default function QuestionDetailModal({
                 );
               })()}
 
-              {/* Drag to bin / categorize — read-only review */}
+              {/* Drag to bin / categorize, read-only review */}
               {isDragToBin && (() => {
                 const extra = (question.extra_data ?? {}) as Record<string, unknown>;
                 const items = Array.isArray(extra.items) ? extra.items as string[] : [];
@@ -342,7 +365,7 @@ export default function QuestionDetailModal({
                 );
               })()}
 
-              {/* In-passage sentence select — read-only review */}
+              {/* In-passage sentence select, read-only review */}
               {isPSS && (() => {
                 const extra = (question.extra_data ?? {}) as Record<string, unknown>;
                 const sentences = Array.isArray(extra.sentences) ? extra.sentences as string[] : [];
@@ -357,7 +380,7 @@ export default function QuestionDetailModal({
                 );
               })()}
 
-              {/* Inline text span click — read-only review */}
+              {/* Inline text span click, read-only review */}
               {isSpanClick && (() => {
                 const extra = (question.extra_data ?? {}) as Record<string, unknown>;
                 const passage = typeof extra.passage === "string" ? extra.passage : "";
@@ -493,7 +516,7 @@ export default function QuestionDetailModal({
                       !studentAnswer ? "text-slate-400 italic" :
                       isCorrect ? "text-emerald-700" : "text-rose-700"
                     }`}>
-                      {studentAnswer || "—"}
+                      {studentAnswer || "-"}
                     </span>
                   </div>
                   {isCorrect === false && (
@@ -514,7 +537,7 @@ export default function QuestionDetailModal({
                       !studentAnswer ? "text-slate-400 italic" :
                       isCorrect ? "text-emerald-700" : "text-rose-700"
                     }`}>
-                      {studentAnswer ?? "—"}
+                      {studentAnswer ?? "-"}
                     </span>
                   </div>
                   {isCorrect === false && (
@@ -550,7 +573,7 @@ export default function QuestionDetailModal({
                           {letter}
                         </span>
                         <div className="flex-1 text-sm text-slate-700 leading-relaxed">
-                          {label ? parseFormattedText(stripChoicePrefix(label)) : "—"}
+                          {label ? parseFormattedText(stripChoicePrefix(label)) : "-"}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0 self-center">
                           {isStudentChoice && !isCorrectChoice && (
@@ -595,7 +618,7 @@ export default function QuestionDetailModal({
                           {choiceImages[letter] ? (
                             <img src={choiceImages[letter]} alt={`Choice ${letter}`} className="max-h-16 h-auto" />
                           ) : (
-                            label ? parseFormattedText(stripChoicePrefix(label)) : "—"
+                            label ? parseFormattedText(stripChoicePrefix(label)) : "-"
                           )}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0 self-center">

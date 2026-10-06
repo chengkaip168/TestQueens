@@ -189,9 +189,9 @@ function buildQuestions(
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Answer matching — handles A/B/C/D and non-standard G/H/I/J letter schemes
-// ─────────────────────────────────────────────────────────────────────────────
+//
+// Answer matching, handles A/B/C/D and non-standard G/H/I/J letter schemes
+//
 
 interface ChoiceInfo {
   index: number;   // position in choices array (0-based)
@@ -241,7 +241,7 @@ function matchOnePart(part: string, infos: ChoiceInfo[]): ChoiceInfo | undefined
     if (byLetter) return byLetter;
   }
 
-  // 4. Positional fallback — only when no choice has a stored letter prefix
+  // 4. Positional fallback, only when no choice has a stored letter prefix
   //    (i.e., all letters are our own positional fallbacks, not from the DB)
   const anyStoredLetters = infos.some(c => /^[A-Za-z][).:\s]/.test(c.raw));
   if (!anyStoredLetters && ansLetter) {
@@ -263,9 +263,9 @@ function resolveAnswer(answer: string | null, infos: ChoiceInfo[]): Set<number> 
   return matched;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+//
 // HTML building
-// ─────────────────────────────────────────────────────────────────────────────
+//
 
 
 // Ensure spaces around inline formatting tags so bold/italic text doesn't
@@ -447,7 +447,7 @@ function buildSectionHeaderHTML(section: IncorrectReportSection): string {
 // Each fragment carries optional per-fragment CSS and a passage group ID.
 // Passage paragraphs use PASSAGE_PARA_FRAG_STYLE (no vertical padding) so they
 // stack tightly.  The PDF loop groups same-passageId fragments per page and draws
-// a single border rect around the group — creating a fresh box on every page.
+// a single border rect around the group, creating a fresh box on every page.
 type FragSpec = { html: string; style?: string; passageId?: string };
 const frag = (html: string): FragSpec => ({ html });
 
@@ -496,10 +496,10 @@ function buildSectionFragments(section: IncorrectReportSection, showHeader: bool
   return frags;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+//
 // Per-fragment HTML builders (header / footer are separate from sections so
 // each chunk stays short enough for html2canvas to render without blank areas)
-// ─────────────────────────────────────────────────────────────────────────────
+//
 
 function buildReportHeaderHTML(data: IncorrectReportData, dateStr: string): string {
   const isSingle    = data.sections.length === 1;
@@ -552,12 +552,12 @@ function buildReportFooterHTML(dateStr: string): string {
     </div>`;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Export — renders each fragment (header, section, footer) to its own small
+//
+// Export, renders each fragment (header, section, footer) to its own small
 // canvas, then places each canvas directly into jsPDF page-by-page.
 // No mega-canvas merge: a 100M+ pixel merged canvas causes toDataURL() to
 // return empty data in Chrome, which produces blank PDF pages.
-// ─────────────────────────────────────────────────────────────────────────────
+//
 
 // z-index:-1 puts fragments behind the page background so users never see them
 // during generation; html2canvas captures elements by reading their properties
@@ -569,7 +569,7 @@ const FRAG_STYLE = [
   "box-sizing:border-box", "pointer-events:none", "z-index:-1",
 ].join(";");
 
-// No vertical padding — passage paragraph canvases stack tightly with no gap.
+// No vertical padding, passage paragraph canvases stack tightly with no gap.
 const PASSAGE_PARA_FRAG_STYLE = [
   "position:fixed", "top:0", "left:0", "width:794px", "background:white",
   "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
@@ -617,7 +617,7 @@ export async function exportIncorrectPDF(data: IncorrectReportData): Promise<voi
   ];
   const fragPassageIds = allSpecs.map(f => f.passageId ?? null);
 
-  // Loading modal — hides the brief rendering flash while giving the user
+  // Loading modal, hides the brief rendering flash while giving the user
   // clear feedback.  data-html2canvas-ignore tells html2canvas to skip it.
   const spinKf = document.createElement("style");
   spinKf.textContent = "@keyframes _pdfSpin{to{transform:rotate(360deg)}}";

@@ -16,25 +16,25 @@ const TOOL_BTNS: ToolBtn[] = [
   {
     id: "highlight",
     label: "Highlight",
-    title: "Highlighter — select text to highlight it",
+    title: "Highlighter: select text to highlight it",
     icon: "M15.232 5.232l3.536 3.536M9 11l6.364-6.364a2 2 0 012.828 2.828L11.828 13.828A2 2 0 0110.414 14.24L7 15l.76-3.414A2 2 0 019 11z",
   },
   {
     id: "eliminate",
     label: "Eliminate",
-    title: "Answer Eliminator — click an answer choice to cross it out",
+    title: "Answer Eliminator: click an answer choice to cross it out",
     icon: "M6 18L18 6M6 6l12 12",
   },
   {
     id: "pencil",
     label: "Draw",
-    title: "Digital Pencil — draw on the page",
+    title: "Digital Pencil: draw on the page",
     icon: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z",
   },
   {
     id: "linereader",
     label: "Line Guide",
-    title: "Line Reader — drag the guide to focus on a line",
+    title: "Line Reader: drag the guide to focus on a line",
     icon: "M4 6h16M4 12h16M4 18h16",
   },
 ];
@@ -89,7 +89,7 @@ export default function ELAToolbar({ tools, questionUid }: Props) {
       {/* Notes button */}
       <button
         type="button"
-        title="Notepad — take notes for this section"
+        title="Notepad: take notes for this section"
         onClick={toggleNotes}
         className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest transition-all select-none ${
           notesOpen
@@ -104,7 +104,7 @@ export default function ELAToolbar({ tools, questionUid }: Props) {
         <span>Notes</span>
       </button>
 
-      {/* Pencil sub-controls — shown when pencil is active */}
+      {/* Pencil sub-controls, shown when pencil is active */}
       {activeTool === "pencil" && (
         <>
           <div className="w-px h-8 bg-slate-200 mx-1 shrink-0" />
@@ -147,7 +147,7 @@ export default function ELAToolbar({ tools, questionUid }: Props) {
         </>
       )}
 
-      {/* Highlight clear button — shown when highlight is active and there are highlights */}
+      {/* Highlight clear button, shown when highlight is active and there are highlights */}
       {activeTool === "highlight" && hasHighlights && (
         <>
           <div className="w-px h-8 bg-slate-200 mx-1 shrink-0" />

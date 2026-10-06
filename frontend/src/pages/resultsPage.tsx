@@ -42,19 +42,19 @@ function getSubTip(name: string): string {
     Vocabulary_in_Context:            "Cover the word, predict what fits from context, then match to the choices.",
     Textual_Evidence:                 "Find the exact lines cited in the question and re-read that paragraph before choosing.",
     Textual_Evidence_and_Reasoning:   "Identify the claim, find the supporting evidence, then check the logical link between them.",
-    Central_Idea:                     "Summarize the whole passage in one sentence — that is your central idea.",
+    Central_Idea:                     "Summarize the whole passage in one sentence, that is your central idea.",
     Main_Idea:                        "The main idea appears in the topic sentence. Eliminate answers that are too specific.",
     Inference_and_Implied_Ideas:      "Work only from what the text says. Avoid over-inferring beyond what is directly supported.",
-    Authors_Purpose:                  "Ask whether the author is informing, persuading, or entertaining — signal words reveal the purpose.",
+    Authors_Purpose:                  "Ask whether the author is informing, persuading, or entertaining, signal words reveal the purpose.",
     Figurative_Language:              "Name the device first (simile/metaphor/personification), then explain what is being compared.",
-    Summarization:                    "Include only the main idea and key support — cut minor details and repeated information.",
+    Summarization:                    "Include only the main idea and key support, cut minor details and repeated information.",
     Text_Structure:                   "Look for signal words: 'however' (contrast), 'therefore' (cause-effect), 'first/then' (sequence).",
     Comma_Usage:                      "Commas join independent clauses with a conjunction, follow introductory phrases, and separate list items.",
     Pronoun_Agreement:                "Match each pronoun to its antecedent in number. 'Everyone/each/either' = singular.",
-    Sentence_Structure:               "Identify the subject + verb in each clause — fragments lack one, run-ons lack punctuation between them.",
+    Sentence_Structure:               "Identify the subject + verb in each clause, fragments lack one, run-ons lack punctuation between them.",
     Verb_Tense:                       "Keep tense consistent unless the time frame changes. Past-perfect ('had done') marks action before another past event.",
     Algebra_and_Equations:            "Translate each word problem into one equation before solving. Substitute back to verify.",
-    Algebraic_Expressions:            "Distribute carefully — distributing a negative flips all signs inside the parentheses.",
+    Algebraic_Expressions:            "Distribute carefully: distributing a negative flips all signs inside the parentheses.",
     Geometry:                         "Sketch the figure and label what you know before computing. Key: area of triangle = ½bh.",
     Arithmetic:                       "Review PEMDAS order-of-operations and practice quick fraction↔decimal conversions.",
     Percentage:                       "Part = Percent × Whole. Percent change = (new − old) ÷ old × 100.",
@@ -146,12 +146,6 @@ function SHSATScoreCard({ score, lang }: { score: SHSATScore; lang: Lang }) {
   const readingSubcats  = score.subcategories.filter(s => s.subject === "english" && !isRevisingEditing(s.name));
   const mathSubcats     = score.subcategories.filter(s => s.subject === "math");
 
-  function subScoreColor(s: number) {
-    if (s >= 580) return "text-emerald-600";
-    if (s >= 450) return "text-amber-500";
-    return "text-rose-500";
-  }
-
   function subBarWidth(s: number) {
     return `${Math.round(((s - 200) / 500) * 100)}%`;
   }
@@ -170,6 +164,9 @@ function SHSATScoreCard({ score, lang }: { score: SHSATScore; lang: Lang }) {
         <span className={`text-6xl font-black tabular-nums ${totalColorClass}`}>{score.total}</span>
         <span className="text-2xl font-bold text-slate-300 mb-1">/700</span>
       </div>
+      <p className="text-xs text-slate-400 text-center -mt-2">
+        {zh ? "這是本站自行推算的分數，並非官方 SHSAT 成績。" : "Our own estimate, not an official SHSAT score."}
+      </p>
 
       {/* Section ratios */}
       <div className="flex items-center justify-center flex-wrap gap-3 sm:gap-4">
@@ -254,6 +251,7 @@ function ResultsPage() {
   const navigate = useNavigate();
   const [lang, setLang] = useState<Lang>("en");
   const [test, setTest] = useState<Test | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [questions, setQuestions] = useState<QuestionResult[]>([]);
   const [shsatScore, setShsatScore] = useState<SHSATScore | null>(null);
   const [selectedQ, setSelectedQ] = useState<SelectedQuestion | null>(null);
@@ -265,11 +263,16 @@ function ResultsPage() {
   useEffect(() => {
     if (!user || !testID) return;
     (async () => {
-      // Query by test ID only — test IDs are per-student UUIDs, user_id filter is not needed
+      // Query by test ID only, test IDs are per-student UUIDs, user_id filter is not needed
       // and would fail for admin viewing (admin uid ≠ student uid).
-      const { data: testData } = await supabase
+      const { data: testData, error: testError } = await supabase
         .from("tests").select("*").eq("id", testID).single();
-      if (testData) setTest(testData as Test);
+      if (testError || !testData) {
+        console.error("Results load failed:", testError);
+        setLoadError(true);
+        return;
+      }
+      setTest(testData as Test);
 
       const { data: qData } = await supabase
         .from("questions")
@@ -318,6 +321,24 @@ function ResultsPage() {
     })();
   }, [user, testID]);
 
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4 p-8 text-center">
+        <p className="text-base font-semibold text-slate-700">Couldn't load these results</p>
+        <p className="text-sm text-slate-500 max-w-sm">
+          The test may have been removed, or you may not have access to it.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate("/home")}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors"
+        >
+          Back to home
+        </button>
+      </div>
+    );
+  }
+
   if (!test) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -340,7 +361,7 @@ function ResultsPage() {
   const revisingCorrect = revisingQs.filter(q => q.is_correct === true).length;
   const readingCorrect  = readingQs.filter(q => q.is_correct === true).length;
 
-  // ── Personalized analysis ──────────────────────────────────────────────────
+  //  Personalized analysis
   const timesArr = questions
     .map(q => q.time_spent)
     .filter((t): t is number => t != null && t >= 3 && t <= 600);
@@ -369,28 +390,28 @@ function ResultsPage() {
     const pct = Math.round((best.earned / best.max) * 100);
     strengths.push(zh
       ? `${best.name} 表現突出，加權正確率 ${pct}%（${best.total} 題）`
-      : `${fmtSubLocalized(best.name, "en")} is a real strength — ${pct}% weighted accuracy on ${best.total} questions`);
+      : `${fmtSubLocalized(best.name, "en")} is a real strength, ${pct}% weighted accuracy on ${best.total} questions`);
   } else if (engCorrect >= englishQs.length * 0.7) {
     strengths.push(zh ? "英文部分整體表現良好" : `English is solid at ${Math.round(engCorrect / Math.max(englishQs.length, 1) * 100)}% accuracy`);
   } else if (mathCorrect >= mathQs.length * 0.7) {
     strengths.push(zh ? "數學部分整體表現良好" : `Math is solid at ${Math.round(mathCorrect / Math.max(mathQs.length, 1) * 100)}% accuracy`);
   } else {
-    strengths.push(zh ? "持續作答每一題，正在建立考試耐力" : "Pushed through every question — building real test stamina");
+    strengths.push(zh ? "持續作答每一題，正在建立考試耐力" : "Pushed through every question, building real test stamina");
   }
   if (pacingGood && avgRound != null) {
     strengths.push(zh
       ? `作答節奏穩定（平均 ${avgRound}s/題，預算 ${budgetRound}s）`
-      : `Great pacing — averaged ${avgRound}s per question, within the ${budgetRound}s budget`);
+      : `Great pacing: averaged ${avgRound}s per question, within the ${budgetRound}s budget`);
   } else if (strongSubs.length > 1) {
     const s2 = strongSubs[1];
     const pct2 = Math.round((s2.earned / s2.max) * 100);
     strengths.push(zh
       ? `${s2.name} 同樣紮實，加權正確率 ${pct2}%`
-      : `${fmtSubLocalized(s2.name, "en")} also solid — ${pct2}% weighted accuracy`);
+      : `${fmtSubLocalized(s2.name, "en")} also solid, ${pct2}% weighted accuracy`);
   } else {
     strengths.push(zh
       ? `完成 ${questions.length} 題作答，對題型已有完整接觸`
-      : `Completed all ${questions.length} questions — full exposure to every question type`);
+      : `Completed all ${questions.length} questions, full exposure to every question type`);
   }
 
   // Improvements
@@ -399,29 +420,29 @@ function ResultsPage() {
     const pct = Math.round((worst.earned / worst.max) * 100);
     improvements.push(zh
       ? `${worst.name} 是最大弱點：加權正確率僅 ${pct}%（${worst.total} 題）`
-      : `${fmtSubLocalized(worst.name, "en")} is the biggest gap — ${pct}% weighted accuracy on ${worst.total} questions`);
+      : `${fmtSubLocalized(worst.name, "en")} is the biggest gap, ${pct}% weighted accuracy on ${worst.total} questions`);
   }
   if (weakSubs.length > 1) {
     const w2 = weakSubs[1];
     const pct2 = Math.round((w2.earned / w2.max) * 100);
     improvements.push(zh
       ? `${w2.name} 同樣需要加強：${pct2}% 正確率（${w2.total} 題）`
-      : `${fmtSubLocalized(w2.name, "en")} also needs work — ${pct2}% accuracy on ${w2.total} questions`);
+      : `${fmtSubLocalized(w2.name, "en")} also needs work, ${pct2}% accuracy on ${w2.total} questions`);
   }
   if (pacingCritical) {
     improvements.push(zh
-      ? `作答速度嚴重偏慢（平均 ${avgRound}s/題 vs ${budgetRound}s 預算）——正式考試有未完成所有題目的風險`
-      : `Pacing is critical — ${avgRound}s/question vs ${budgetRound}s budget; at this speed you risk not finishing the actual SHSAT`);
+      ? `作答速度嚴重偏慢（平均 ${avgRound}s/題 vs ${budgetRound}s 預算），正式考試有未完成所有題目的風險`
+      : `Pacing is critical: ${avgRound}s/question vs ${budgetRound}s budget; at this speed you risk not finishing the actual SHSAT`);
   } else if (pacingWarning) {
     improvements.push(zh
-      ? `作答節奏稍慢（平均 ${avgRound}s/題）——接近預算邊界，練習計時可有效改善`
-      : `Slightly over pace — ${avgRound}s/question against a ${budgetRound}s budget; consistent timed practice can close this gap`);
+      ? `作答節奏稍慢（平均 ${avgRound}s/題），接近預算邊界，練習計時可有效改善`
+      : `Slightly over pace: ${avgRound}s/question against a ${budgetRound}s budget; consistent timed practice can close this gap`);
   }
   while (improvements.length < 2) {
     if (revisingQs.length > 0 && revisingCorrect / revisingQs.length < 0.7)
-      improvements.push(zh ? "文法修訂題正確率低於 70%，加強基礎語法規則" : `Revising/Editing at ${Math.round(revisingCorrect / revisingQs.length * 100)}% — grammar patterns here are predictable and yield fast gains`);
+      improvements.push(zh ? "文法修訂題正確率低於 70%，加強基礎語法規則" : `Revising/Editing at ${Math.round(revisingCorrect / revisingQs.length * 100)}%, grammar patterns here are predictable and yield fast gains`);
     else if (mathQs.length > 0 && mathCorrect / mathQs.length < 0.7)
-      improvements.push(zh ? "數學正確率低於 70%，優先複習代數與比例" : `Math at ${Math.round(mathCorrect / Math.max(mathQs.length, 1) * 100)}% — prioritize Algebra and Ratios/Proportions (highest question count)`);
+      improvements.push(zh ? "數學正確率低於 70%，優先複習代數與比例" : `Math at ${Math.round(mathCorrect / Math.max(mathQs.length, 1) * 100)}%, prioritize Algebra and Ratios/Proportions (highest question count)`);
     else
       improvements.push(zh ? "仍有部分題型有進步空間" : "Some harder question types still have room for improvement");
     break;
@@ -431,27 +452,27 @@ function ResultsPage() {
   if (weakSubs.length > 0) {
     const w = weakSubs[0];
     recommendations.push(zh
-      ? `針對 ${w.name} 進行 20 題集中練習——研究顯示單一主題集中練習比混合練習效率高出 40%。訣竅：${getSubTip(w.name)}`
-      : `Drill ${fmtSubLocalized(w.name, "en")} in focused blocks — single-topic practice is ~40% more efficient than mixed sets. Key tip: ${getSubTip(w.name)}`);
+      ? `針對 ${w.name} 進行 20 題集中練習。研究顯示單一主題集中練習比混合練習效率高出 40%。訣竅：${getSubTip(w.name)}`
+      : `Drill ${fmtSubLocalized(w.name, "en")} in focused blocks, single-topic practice is ~40% more efficient than mixed sets. Key tip: ${getSubTip(w.name)}`);
   }
   if (pacingCritical || pacingWarning) {
     recommendations.push(zh
-      ? `設定每題 ${budgetRound}s 計時器，完成 20 題不回頭修改——計時訓練是建立作答節奏最快的方法`
-      : `Set a ${budgetRound}s-per-question timer and complete 20 questions without going back — timed repetition builds pace faster than any other method`);
+      ? `設定每題 ${budgetRound}s 計時器，完成 20 題不回頭修改。計時訓練是建立作答節奏最快的方法`
+      : `Set a ${budgetRound}s-per-question timer and complete 20 questions without going back, timed repetition builds pace faster than any other method`);
   } else {
     recommendations.push(zh
-      ? `在 24 小時內重新閱讀每道錯題的解析——間隔重複研究顯示，當天複習的記憶保留率是隔天的兩倍`
-      : `Re-read each incorrect answer's explanation within 24 hours — spaced-repetition research shows same-day review doubles retention vs. reviewing days later`);
+      ? `在 24 小時內重新閱讀每道錯題的解析。間隔重複研究顯示，當天複習的記憶保留率是隔天的兩倍`
+      : `Re-read each incorrect answer's explanation within 24 hours, spaced-repetition research shows same-day review doubles retention vs. reviewing days later`);
   }
   if (weakSubs.length > 1) {
     const w2 = weakSubs[1];
     recommendations.push(zh
-      ? `下次練習集中在 ${w2.name}——每次專注一個弱點，比同時練多個更能快速建立信心`
-      : `Next session, focus exclusively on ${fmtSubLocalized(w2.name, "en")} — one weak area per session builds fluency faster than mixing topics`);
+      ? `下次練習集中在 ${w2.name}。每次專注一個弱點，比同時練多個更能快速建立信心`
+      : `Next session, focus exclusively on ${fmtSubLocalized(w2.name, "en")}, one weak area per session builds fluency faster than mixing topics`);
   } else {
     recommendations.push(zh
-      ? `在薄弱科目上增加練習頻率——每週 3 次短時間集中練習優於一次長時間練習`
-      : `Increase practice frequency on your weaker section — three 20-minute focused sessions per week outperform one long session`);
+      ? `在薄弱科目上增加練習頻率。每週 3 次短時間集中練習優於一次長時間練習`
+      : `Increase practice frequency on your weaker section, three 20-minute focused sessions per week outperform one long session`);
   }
 
   const analysis: AIAnalysis = { strengths, improvements, recommendations };
@@ -523,7 +544,7 @@ function ResultsPage() {
             {new Date(test.created_at).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
           </p>
         </div>
-        {/* Language toggle — admin only */}
+        {/* Language toggle, admin only */}
         {user?.role === "admin" && (
           <div className="flex items-center gap-1 shrink-0">
             {(["en", "zh-TW"] as const).map(l => (
@@ -589,7 +610,7 @@ function ResultsPage() {
           </div>
         </div>
 
-        {/* SHSAT Score Estimate — not shown for practice sessions */}
+        {/* SHSAT Score Estimate, not shown for practice sessions */}
         {shsatScore && test.test_name !== "Practice" && <SHSATScoreCard score={shsatScore} lang={lang} />}
 
         {/* AI Coach */}

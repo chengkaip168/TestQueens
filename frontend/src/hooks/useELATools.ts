@@ -41,7 +41,7 @@ export function useELATools() {
     setActiveTool(prev => prev === tool ? null : tool);
   }, []);
 
-  // ── Highlights ──────────────────────────────────────────────────────────────
+  //  Highlights
 
   const addHighlights = useCallback((key: string, rects: HighlightRect[]) => {
     if (!rects.length) return;
@@ -60,7 +60,7 @@ export function useELATools() {
     });
   }, []);
 
-  // ── Eliminations ────────────────────────────────────────────────────────────
+  //  Eliminations
 
   const toggleElimination = useCallback((uid: string, letter: string) => {
     setEliminations(prev => {
@@ -72,7 +72,7 @@ export function useELATools() {
     });
   }, []);
 
-  // ── Pencil ───────────────────────────────────────────────────────────────────
+  //  Pencil
 
   const addStroke = useCallback((uid: string, stroke: PencilStroke) => {
     setPencil(prev => {
@@ -121,7 +121,7 @@ export function useELATools() {
     return pencil.get(uid) ?? { strokes: [], undone: [] };
   }, [pencil]);
 
-  // ── Bookmarks ────────────────────────────────────────────────────────────────
+  //  Bookmarks
 
   const toggleBookmark = useCallback((uid: string) => {
     setBookmarks(prev => {

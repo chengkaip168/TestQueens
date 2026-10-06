@@ -62,15 +62,15 @@ function equationLabel(p1: Point, p2: Point): string {
   return `y = ${mPart}${bPart}`;
 }
 
-// ── Component ──────────────────────────────────────────────────────────────────
+//  Component
 
 interface SHSATGrapherProps {
   /** Called with JSON string {"p1":…,"p2":…} whenever the student moves a point */
   onAnswerChange?: (json: string) => void;
   isReadOnly?: boolean;
-  /** JSON string {"p1":…,"p2":…} — the student's submitted answer (review mode) */
+  /** JSON string {"p1":…,"p2":…}, the student's submitted answer (review mode) */
   previousAnswer?: string;
-  /** JSON string {"m":…,"b":…} or {"vertical":true,"x":…} — correct answer (review mode) */
+  /** JSON string {"m":…,"b":…} or {"vertical":true,"x":…}, correct answer (review mode) */
   correctAnswer?: string;
 }
 
@@ -85,7 +85,7 @@ export default function SHSATGrapher({
   const STEP = SIZE / (RANGE * 2);   // px per grid unit
   const ORIGIN = SIZE / 2;           // px coordinate of (0,0)
 
-  // Student's two draggable points — default to a flat line at y = 0
+  // Student's two draggable points, default to a flat line at y = 0
   const [p1, setP1] = useState<Point>({ x: -5, y: 0 });
   const [p2, setP2] = useState<Point>({ x:  5, y: 0 });
   const [dragging, setDragging] = useState<"p1" | "p2" | null>(null);
@@ -109,7 +109,7 @@ export default function SHSATGrapher({
   });
   const snap = (v: number) => Math.max(-RANGE, Math.min(RANGE, Math.round(v)));
 
-  // ── Drag logic ─────────────────────────────────────────────────────────────
+  //  Drag logic
 
   const applyDrag = (clientX: number, clientY: number) => {
     if (!dragging || !svgRef.current) return;
@@ -141,7 +141,7 @@ export default function SHSATGrapher({
   };
   const stopDrag = () => setDragging(null);
 
-  // ── Derived display values ─────────────────────────────────────────────────
+  //  Derived display values
 
   // In review mode, show the student's submitted points instead of the live state
   const displayP1 = isReadOnly && previousAnswer
@@ -165,12 +165,12 @@ export default function SHSATGrapher({
   const gridLines: number[] = [];
   for (let i = -RANGE; i <= RANGE; i++) if (i !== 0) gridLines.push(i);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  //  Render
 
   return (
     <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap", userSelect: "none" }}>
 
-      {/* ── Coordinate plane SVG ── */}
+      {/*  Coordinate plane SVG  */}
       <div style={{ border: "1px solid #e2e8f0", borderRadius: 4.76, padding: 6, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
         <svg
           ref={svgRef}
@@ -214,7 +214,7 @@ export default function SHSATGrapher({
           <text x={toPx(RANGE, 0).x - 3} y={ORIGIN + 16} fontSize="11" fill="#374151" fontFamily="'Albert Sans', sans-serif" fontStyle="italic">x</text>
           <text x={ORIGIN + 8} y={toPx(0, RANGE).y + 4} fontSize="11" fill="#374151" fontFamily="'Albert Sans', sans-serif" fontStyle="italic">y</text>
 
-          {/* Tick labels — every 2 units */}
+          {/* Tick labels, every 2 units */}
           {gridLines.filter(i => i % 2 === 0).map(i => (
             <g key={`t-${i}`}>
               <text x={toPx(i, 0).x} y={ORIGIN + 15} fontSize="9.5" fill="#9ca3af" textAnchor="middle" fontFamily="ui-monospace, monospace">{i}</text>
@@ -223,7 +223,7 @@ export default function SHSATGrapher({
           ))}
           <text x={ORIGIN - 6} y={ORIGIN + 15} fontSize="9.5" fill="#9ca3af" textAnchor="end" fontFamily="ui-monospace, monospace">0</text>
 
-          {/* ── Correct answer line (review: green) ── */}
+          {/*  Correct answer line (review: green)  */}
           {correctEnds && (() => {
             const [ce1, ce2] = correctEnds;
             return (
@@ -235,7 +235,7 @@ export default function SHSATGrapher({
             );
           })()}
 
-          {/* ── Student's line ── */}
+          {/*  Student's line  */}
           <line
             x1={toPx(e1.x, e1.y).x} y1={toPx(e1.x, e1.y).y}
             x2={toPx(e2.x, e2.y).x} y2={toPx(e2.x, e2.y).y}
@@ -245,7 +245,7 @@ export default function SHSATGrapher({
             strokeLinecap="round"
           />
 
-          {/* ── Interactive draggable points (live mode) ── */}
+          {/*  Interactive draggable points (live mode)  */}
           {!isReadOnly && ([
             { key: "p1" as const, pt: p1 },
             { key: "p2" as const, pt: p2 },
@@ -282,7 +282,7 @@ export default function SHSATGrapher({
             );
           })}
 
-          {/* ── Static points in review mode ── */}
+          {/*  Static points in review mode  */}
           {isReadOnly && [displayP1, displayP2].map((pt, i) => {
             const px = toPx(pt.x, pt.y);
             return (
@@ -295,7 +295,7 @@ export default function SHSATGrapher({
         </svg>
       </div>
 
-      {/* ── Right-side panel ── */}
+      {/*  Right-side panel  */}
       {!isReadOnly ? (
         // Live mode: show current equation + point coordinates + instructions
         <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 172 }}>

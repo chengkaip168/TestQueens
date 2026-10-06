@@ -3,7 +3,7 @@ import { parseFormattedText } from "../utils/textParser";
 
 interface Props {
   text: string;            // question text containing "[BLANK]" marker
-  options: string[];       // ["A) word", "B) word", ...] — up to 4
+  options: string[];       // ["A) word", "B) word", ...], up to 4
   chosenAnswer: (answer: string) => void;
   isReadOnly?: boolean;
   previousAnswer?: string; // letter "A"–"D"
@@ -81,7 +81,7 @@ export default function InlineDropdownQuestion({
           title="Select an answer"
           className={dropdownCls}
         >
-          <option value="">— choose —</option>
+          <option value="">Choose one</option>
           {choices.map(({ letter, label }) => (
             <option key={letter} value={letter}>{label}</option>
           ))}

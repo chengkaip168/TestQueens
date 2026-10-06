@@ -58,7 +58,7 @@ export const SUBCAT_TW: Record<string, string> = {
   Stats_and_Data_Analysis: "統計與資料分析", "Stats and Data Analysis": "統計與資料分析", "Stats & Data Analysis": "統計與資料分析",
   Statistics: "統計",
   General: "綜合", Uncategorized: "未分類",
-  // Merged from parentPage's former local copy during consolidation —
+  // Merged from parentPage's former local copy during consolidation -
   // these five were missing here, so Chinese users saw English for them
   // in the results modal and PDF export.
   "Authors_Purpose_and_Tone": "作者目的與語氣",

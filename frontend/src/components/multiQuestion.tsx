@@ -44,15 +44,18 @@ function MCQuestion({
   // bubble naturally shows the correct set for each question.
   const fallbackLetters = ["A", "B", "C", "D"];
 
-  const choices = rawOptions.map((opt, i) => {
-    const letter = extractLetter(opt, fallbackLetters[i]); // reads DB letter (A–D or E–H)
-    return {
-      value: letter,          // backend answer key — original DB letter
-      label: opt,
-      image: choiceImages[letter] ?? choiceImages[fallbackLetters[i]],
-      letter,                 // bubble display — same original DB letter
-    };
-  });
+  const choices = rawOptions
+    .map((opt, i) => ({ opt, i }))
+    .filter(({ opt }) => (opt ?? "").trim() !== "")
+    .map(({ opt, i }) => {
+      const letter = extractLetter(opt, fallbackLetters[i]); // reads DB letter (A–D or E–H)
+      return {
+        value: letter,          // backend answer key, original DB letter
+        label: opt,
+        image: choiceImages[letter] ?? choiceImages[fallbackLetters[i]],
+        letter,                 // bubble display: same original DB letter
+      };
+    });
 
   return (
     <fieldset className="flex flex-col gap-2.5">
@@ -93,7 +96,7 @@ function MCQuestion({
                 chosenAnswer(e.target.value);
               }}
             />
-            {/* Letter bubble — shows X when eliminated */}
+            {/* Letter bubble, shows X when eliminated */}
             <span
               className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border transition-colors mt-0.5 ${
                 isEliminated

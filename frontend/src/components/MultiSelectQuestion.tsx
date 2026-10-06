@@ -35,23 +35,27 @@ export default function MultiSelectQuestion({
   );
   const [checked, setChecked] = useState<Set<string>>(initialChecked);
 
-  const choices = options.filter(Boolean).map((opt, i) => ({
-    letter: extractLetter(opt, FALLBACK_LETTERS[i]),
-    label: opt,
-    image: choiceImages[FALLBACK_LETTERS[i]],
-  }));
+  const choices = options
+    .map((opt, i) => ({ opt, i }))
+    .filter(({ opt }) => (opt ?? "").trim() !== "")
+    .map(({ opt, i }) => {
+      const letter = extractLetter(opt, FALLBACK_LETTERS[i]);
+      return {
+        letter,
+        label: opt,
+        image: choiceImages[letter] ?? choiceImages[FALLBACK_LETTERS[i]],
+      };
+    });
 
   const use2Col = choices.length > 4;
 
   function toggle(letter: string) {
     if (isReadOnly) return;
-    setChecked(prev => {
-      const next = new Set(prev);
-      if (next.has(letter)) next.delete(letter);
-      else next.add(letter);
-      chosenAnswer([...next].sort().join(","));
-      return next;
-    });
+    const next = new Set(checked);
+    if (next.has(letter)) next.delete(letter);
+    else next.add(letter);
+    setChecked(next);
+    chosenAnswer([...next].sort().join(","));
   }
 
   return (

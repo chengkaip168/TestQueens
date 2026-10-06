@@ -1,14 +1,17 @@
-// SHSAT mock test question distribution — new 100-question format (50 ELA + 50 Math).
+// SHSAT mock test question distribution, new 100-question format (50 ELA + 50 Math).
 //
 // ELA breakdown (50):
-//   Reading Comprehension  = 47  (94 %) — served across 7 adaptive passage sets
-//   Revising / Editing     =  3  ( 6 %) — standalone items served at end of ELA
+//   Reading Comprehension  = 47  (94 %), served across 7 adaptive passage sets
+//   Revising / Editing     =  3  ( 6 %), standalone items served at end of ELA
 //
 // Math breakdown (50): 14 subcategories, proportionally scaled from the old 57-question bank.
 //
 // Difficulty totals:
-//   ELA  — Easy: 12 | Medium: 27 | Hard: 11
-//   Math — Easy: 17 | Medium: 25 | Hard:  8
+//   ELA , Easy: 12 | Medium: 27 | Hard: 11
+//   Math, Easy: 17 | Medium: 25 | Hard:  8
+
+// Length of a full mock test. Must match the distributions below (50 + 50).
+export const MOCK_TEST_QUESTIONS = 100;
 
 export interface SubcategoryConfig {
   name: string;
@@ -37,7 +40,7 @@ export const MATH_DISTRIBUTION: SubcategoryConfig[] = [
 ];
 
 // Reading Comprehension subcategories (47 of the 50 ELA questions).
-// These are served through adaptive passage selection — not standalone items.
+// These are served through adaptive passage selection, not standalone items.
 export const RC_DISTRIBUTION: SubcategoryConfig[] = [
   { name: "Main Idea",               count: 8, easy: 2, medium: 4, hard: 2 },
   { name: "Supporting Details",      count: 8, easy: 3, medium: 4, hard: 1 },
@@ -50,7 +53,7 @@ export const RC_DISTRIBUTION: SubcategoryConfig[] = [
 ];
 
 // Revising / Editing subcategories (3 of the 50 ELA questions).
-// These are standalone items served at the end of ELA — after all passage sets.
+// These are standalone items served at the end of ELA, after all passage sets.
 export const RE_DISTRIBUTION: SubcategoryConfig[] = [
   { name: "Sentence Structure",  count: 1, easy: 0, medium: 1, hard: 0 },
   { name: "Usage & Grammar",     count: 1, easy: 1, medium: 0, hard: 0 },

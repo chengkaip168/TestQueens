@@ -1,4 +1,4 @@
-// SHSAT score estimator — difficulty-weighted, per-subcategory formula.
+// SHSAT score estimator, difficulty-weighted, per-subcategory formula.
 //
 // Per subcategory:
 //   earned = Σ difficulty_weight for each correct question  (easy=1, medium=1.5, hard=2)
@@ -9,7 +9,7 @@
 // weighted by each subcategory's max points. This simplifies to:
 //   total = (sum_all_earned / sum_all_max) × 500 + 200   →   range 200–700
 //
-// Section ratios (ELA / Math) are shown as percentages — they cannot be
+// Section ratios (ELA / Math) are shown as percentages, they cannot be
 // added together to derive the total because they are independent ratios.
 //
 // Score bands (calibrated to real SHSAT cutoffs on a 200–700 scale):

@@ -20,6 +20,10 @@ function SignUpPage() {
       setError("All fields are required.");
       return;
     }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
     setLoading(true);
     try {
       const invokeResult = await supabase.functions.invoke("create-account", {
@@ -33,7 +37,7 @@ function SignUpPage() {
           const body = await res.json();
           if (body?.error && typeof body.error === "string") msg = body.error;
         } catch {
-          // Response body was not JSON — fall back to the generic message
+          // Response body was not JSON, fall back to the generic message
         }
         setError(msg);
         return;
@@ -61,7 +65,7 @@ function SignUpPage() {
 
   return (
     <div className="flex h-screen w-full">
-      {/* Left panel — branding */}
+      {/* Left panel, branding */}
       <div className="hidden md:flex md:w-2/5 bg-linear-to-br from-blue-700 to-blue-900 flex-col items-center justify-center p-12 relative overflow-hidden">
         <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full bg-white/5" />
         <div className="absolute -bottom-32 -right-16 w-96 h-96 rounded-full bg-white/5" />
@@ -88,7 +92,7 @@ function SignUpPage() {
         </div>
       </div>
 
-      {/* Right panel — form */}
+      {/* Right panel, form */}
       <div className="flex flex-1 items-center justify-center bg-white p-4 sm:p-8 overflow-y-auto">
         <div className="w-full max-w-sm flex flex-col gap-6 py-4">
           <div className="flex md:hidden items-center gap-2 mb-2">
@@ -179,6 +183,13 @@ function SignUpPage() {
                 {error}
               </p>
             )}
+            <p className="text-xs text-slate-500 leading-relaxed">
+              By creating an account you agree to our{" "}
+              <a href="#/terms" className="text-blue-600 hover:text-blue-700 underline underline-offset-2">Terms</a>{" "}
+              and{" "}
+              <a href="#/privacy" className="text-blue-600 hover:text-blue-700 underline underline-offset-2">Privacy Policy</a>.
+              Accounts are for students aged 13 and over.
+            </p>
             <button
               type="submit"
               disabled={loading}

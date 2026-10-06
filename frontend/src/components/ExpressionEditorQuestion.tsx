@@ -27,7 +27,7 @@ function ExprDisplay({ value }: { value: string }) {
   return <>{nodes}</>;
 }
 
-// 4 rows × 6 cols — matches SHSAT virtual keyboard layout
+// 4 rows × 6 cols, matches SHSAT virtual keyboard layout
 const KEY_ROWS: { label: string; ins: string }[][] = [
   [
     { label: "7", ins: "7" },
@@ -65,10 +65,10 @@ const KEY_ROWS: { label: string; ins: string }[][] = [
 
 // Special function keys (amber-tinted, bottom row)
 const SPECIAL_KEYS: { label: string; ins: string; title: string }[] = [
-  { label: "√(",  ins: "√(", title: "Square root — close with )" },
+  { label: "√(",  ins: "√(", title: "Square root, close with )" },
   { label: "π",   ins: "π",  title: "Pi" },
   { label: "| |", ins: "|",  title: "Absolute value bar" },
-  { label: "□ⁿ", ins: "^",  title: "Exponent — type the power after pressing" },
+  { label: "□ⁿ", ins: "^",  title: "Exponent: type the power after pressing" },
 ];
 
 interface Props {
@@ -88,20 +88,16 @@ export default function ExpressionEditorQuestion({
 
   function press(ins: string) {
     if (isReadOnly) return;
-    setExpr(prev => {
-      const next = prev + ins;
-      chosenAnswer(next);
-      return next;
-    });
+    const next = expr + ins;
+    setExpr(next);
+    chosenAnswer(next);
   }
 
   function del() {
     if (isReadOnly) return;
-    setExpr(prev => {
-      const next = prev.slice(0, -1);
-      chosenAnswer(next);
-      return next;
-    });
+    const next = expr.slice(0, -1);
+    setExpr(next);
+    chosenAnswer(next);
   }
 
   function clr() {
@@ -126,11 +122,11 @@ export default function ExpressionEditorQuestion({
         )}
       </div>
 
-      {/* Keyboard — hidden in read-only (review) mode */}
+      {/* Keyboard, hidden in read-only (review) mode */}
       {!isReadOnly && (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-2 flex flex-col gap-1.5">
 
-          {/* Variable buttons — only shown when the question specifies variables */}
+          {/* Variable buttons, only shown when the question specifies variables */}
           {variables.length > 0 && (
             <div className="flex items-center gap-1 pb-1.5 border-b border-slate-200 flex-wrap">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pr-1">Var</span>

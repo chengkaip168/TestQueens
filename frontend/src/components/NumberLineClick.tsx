@@ -21,7 +21,7 @@ export default function NumberLineClick({
   previousAnswer,
   correctAnswer,
 }: Props) {
-  // ── Layout constants ──────────────────────────────────────────────────────
+  //  Layout constants
   const SVG_W  = 520;
   const SVG_H  = 92;
   const PAD    = 46;             // px from edge to where line starts/ends
@@ -54,7 +54,7 @@ export default function NumberLineClick({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Pointer interaction ───────────────────────────────────────────────────
+  //  Pointer interaction
   const applyPointer = (clientX: number) => {
     if (!svgRef.current || isReadOnly) return;
     const rect  = svgRef.current.getBoundingClientRect();
@@ -70,7 +70,7 @@ export default function NumberLineClick({
   const onTouchStart = (e: React.TouchEvent<SVGSVGElement>)  => { if (isReadOnly) return; setDragging(true);  applyPointer(e.touches[0].clientX); };
   const onTouchMove  = (e: React.TouchEvent<SVGSVGElement>)  => { e.preventDefault(); if (dragging) applyPointer(e.touches[0].clientX); };
 
-  // ── Parse answer strings ──────────────────────────────────────────────────
+  //  Parse answer strings
   const parseNum = (s?: string | null): number | null => {
     if (s == null || s === "") return null;
     const n = parseFloat(s);
@@ -87,7 +87,7 @@ export default function NumberLineClick({
     && correctVal !== null
     && Math.abs(studentVal - correctVal) < step * 0.5;
 
-  // ── Build tick list ───────────────────────────────────────────────────────
+  //  Build tick list
   // We place a tick at every step increment. Major ticks = integers (or every `step`
   // if step >= 1). Labels are shown every labelStep to avoid crowding.
 
@@ -110,12 +110,12 @@ export default function NumberLineClick({
     return String(parseFloat(v.toFixed(6)));
   };
 
-  // ── Tooltip x-clamp (so it never overflows the SVG) ──────────────────────
+  //  Tooltip x-clamp (so it never overflows the SVG)
   const tipX = (cx: number) => Math.max(PAD + 22, Math.min(SVG_W - PAD - 22, cx));
 
   return (
     <div style={{ userSelect: "none", display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* ── SVG ── */}
+      {/*  SVG  */}
       <div style={{
         border: "1px solid #e2e8f0", borderRadius: 5.95,
         padding: "6px 4px 4px", background: "#fff",
@@ -143,7 +143,7 @@ export default function NumberLineClick({
         >
           <rect x={0} y={0} width={SVG_W} height={SVG_H} fill="#fafbfc" rx={8} />
 
-          {/* ── Axis line ── */}
+          {/*  Axis line  */}
           <line
             x1={PAD} y1={LINE_Y} x2={PAD + LINE_W} y2={LINE_Y}
             stroke="#374151" strokeWidth={2} strokeLinecap="round"
@@ -159,7 +159,7 @@ export default function NumberLineClick({
             fill="#374151"
           />
 
-          {/* ── Ticks + labels ── */}
+          {/*  Ticks + labels  */}
           {Array.from({ length: numSteps + 1 }, (_, i) => {
             const v   = parseFloat((min + i * step).toFixed(10));
             const x   = toX(v);
@@ -187,7 +187,7 @@ export default function NumberLineClick({
             );
           })}
 
-          {/* ── Correct answer dot (review mode — green, rendered first so student dot renders on top) ── */}
+          {/*  Correct answer dot (review mode, green, rendered first so student dot renders on top)  */}
           {isReadOnly && correctVal !== null && (() => {
             const cx = toX(correctVal);
             const tx = tipX(cx);
@@ -211,7 +211,7 @@ export default function NumberLineClick({
             );
           })()}
 
-          {/* ── Student / live dot ── */}
+          {/*  Student / live dot  */}
           {liveVal !== null && (() => {
             const cx     = toX(liveVal);
             const tx     = tipX(cx);
@@ -230,7 +230,7 @@ export default function NumberLineClick({
                   r={dragging ? 9 : 7}
                   fill="#fff" stroke={stroke} strokeWidth={2.5}
                 />
-                {/* Floating value label (live mode only — tooltip box) */}
+                {/* Floating value label (live mode only, tooltip box) */}
                 {!isReadOnly && (
                   <>
                     <rect x={tx - 22} y={8} width={44} height={18} rx={4} fill="#1e3a8a" />
@@ -249,7 +249,7 @@ export default function NumberLineClick({
         </svg>
       </div>
 
-      {/* ── Legend / instruction strip ── */}
+      {/*  Legend / instruction strip  */}
       {isReadOnly ? (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12.5 }}>
           {previousAnswer != null && previousAnswer !== "" && (
@@ -261,7 +261,7 @@ export default function NumberLineClick({
               <span style={{ color: "#374151" }}>
                 Your answer:&nbsp;
                 <strong style={{ fontFamily: "monospace" }}>
-                  {studentVal !== null ? fmtVal(studentVal) : "—"}
+                  {studentVal !== null ? fmtVal(studentVal) : "-"}
                 </strong>
               </span>
             </div>

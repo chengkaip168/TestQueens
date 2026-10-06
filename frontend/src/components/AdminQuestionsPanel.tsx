@@ -26,7 +26,7 @@ interface MediaItem {
   passageText: string;
   previewUrl: string;
   isExisting: boolean;
-  // original DB values — set when loading existing media, used to detect changes
+  // original DB values, set when loading existing media, used to detect changes
   _origId?: string;
   _origType?: MediaType;
   _origContent?: string;
@@ -64,7 +64,7 @@ type FormData = Partial<Question> & {
   choice_5?: string;
   choice_6?: string;
   select_count?: number | string;
-  variables?: string; // comma-separated, e.g. "x, n" — only for expression type
+  variables?: string; // comma-separated, e.g. "x, n", only for expression type
   nl_min?: string;       // number_line_click: left bound
   nl_max?: string;       // number_line_click: right bound
   nl_step?: string;      // number_line_click: snap increment
@@ -166,16 +166,15 @@ function Select({
   );
 }
 
-// ── Preview helpers ────────────────────────────────────────────────────────────
+//  Preview helpers
 
-function previewExtractLetter(text: string | undefined, fallback: string): string {
-  if (!text) return fallback;
-  const m = text.match(/^([A-Ha-h])[).:\s]/);
-  return m ? m[1].toUpperCase() : fallback;
-}
-
-function previewStripPrefix(text: string): string {
-  return text.replace(/^[A-Ha-h][).:\s]\s*/, "");
+function SectionLabel({ children, anyLabel }: { children: string; anyLabel: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-bold uppercase tracking-widest text-zinc-500">{children}</span>
+      <span className="text-xs font-semibold text-amber-500 normal-case">{anyLabel}</span>
+    </div>
+  );
 }
 
 function checkPreviewAnswer(type: QuestionType, student: string, correct: string): boolean | null {
@@ -205,7 +204,7 @@ function checkPreviewAnswer(type: QuestionType, student: string, correct: string
   return s === c; // linear_graphing, expression
 }
 
-// ── Type badge helper ──────────────────────────────────────────────────────────
+//  Type badge helper
 
 function TypeBadge({ type, source }: { type: string; source?: string }) {
   const label =
@@ -248,7 +247,7 @@ function TypeBadge({ type, source }: { type: string; source?: string }) {
   );
 }
 
-// ── Generate AI Questions modal ────────────────────────────────────────────────
+//  Generate AI Questions modal
 
 interface GenerateModalProps {
   onClose: () => void;
@@ -369,15 +368,6 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
   }, 0) / estimatedIds.length;
   const estimatedCost = (genCount * avgCost).toFixed(2);
 
-  function SectionLabel({ children, anyLabel }: { children: string; anyLabel: string }) {
-    return (
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-bold uppercase tracking-widest text-zinc-500">{children}</span>
-        <span className="text-xs font-semibold text-amber-500 normal-case">{anyLabel}</span>
-      </div>
-    );
-  }
-
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-white border border-zinc-200 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
@@ -437,7 +427,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
             </div>
           ) : (
             <>
-              {/* ── Question type (multi-select) ─────────────────────── */}
+              {/*  Question type (multi-select)  */}
               <div className="flex flex-col gap-1.5">
                 <SectionLabel anyLabel={genTypes.length === 0 ? "· Any (random)" : ""}>Question Type</SectionLabel>
                 <div className="flex flex-col gap-2">
@@ -480,7 +470,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
                 </div>
               </div>
 
-              {/* ── Choices per question — multi-select type only ────── */}
+              {/*  Choices per question, multi-select type only  */}
               {genTypes.some(id => id.startsWith("multi-select")) && (
                 <div className="flex flex-col gap-1.5">
                   <Label>Choices per question</Label>
@@ -501,7 +491,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
                 </div>
               )}
 
-              {/* ── Category (multi-select) ──────────────────────────── */}
+              {/*  Category (multi-select)  */}
               <div className="flex flex-col gap-1.5">
                 <SectionLabel anyLabel={genCategories.length === 0 ? "· All categories" : ""}>Category</SectionLabel>
                 {/* Math subcategories */}
@@ -544,7 +534,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
                 </div>
               </div>
 
-              {/* ── How many questions ───────────────────────────────── */}
+              {/*  How many questions  */}
               <div className="flex flex-col gap-1.5">
                 <Label>How many questions?</Label>
                 <div className="grid grid-cols-4 gap-2">
@@ -563,7 +553,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
                 </div>
               </div>
 
-              {/* ── Difficulty (multi-select) ────────────────────────── */}
+              {/*  Difficulty (multi-select)  */}
               <div className="flex flex-col gap-1.5">
                 <SectionLabel anyLabel={genDifficulties.length === 0 ? "· Mixed" : ""}>Difficulty</SectionLabel>
                 <div className="grid grid-cols-3 gap-2">
@@ -621,7 +611,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
   );
 }
 
-// ── Main panel ─────────────────────────────────────────────────────────────────
+//  Main panel
 
 interface AdminQuestionsPanelProps {
   initialEditUid?: string | null;
@@ -661,12 +651,13 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
   const [isNewTopic, setIsNewTopic] = useState(false);
   const [newTopicName, setNewTopicName] = useState("");
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  // media_ids removed in the editor, deleted from dictionary_of_media on save.
+  const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [originalForm, setOriginalForm] = useState<FormData | null>(null);
   const [previewAnswer, setPreviewAnswer] = useState<string>("");
   const [previewResetKey, setPreviewResetKey] = useState(0);
-  const [showPreview, setShowPreview] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<Question | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -680,17 +671,28 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
   }
 
   useEffect(() => {
-    supabase.from("all_questions").select("sub_category").then(({ data }) => {
-      if (!data) return;
-      const unique = [...new Set(
-        data.map((r: { sub_category: string | null }) => r.sub_category).filter(Boolean)
-      )].sort() as string[];
-      setCategories(unique);
-    });
+    let cancelled = false;
+    (async () => {
+      const found = new Set<string>();
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase
+          .from("all_questions")
+          .select("sub_category")
+          .order("uid")
+          .range(from, from + 999);
+        if (error || !data || data.length === 0) break;
+        for (const r of data as { sub_category: string | null }[]) {
+          if (r.sub_category) found.add(r.sub_category);
+        }
+        if (data.length < 1000) break;
+      }
+      if (!cancelled) setCategories([...found].sort());
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Build the packet list from the UIDs themselves. It cannot come from the
-  // `source` column, which only holds bank / ai / STA–STD — never a year code
+  // `source` column, which only holds bank / ai / STA–STD, never a year code
   // like 23B or 25A, since those questions are all filed under "bank".
   // Paged because PostgREST caps a single response at 1000 rows, and the bank
   // is larger than that, so one request would silently miss later packets.
@@ -716,8 +718,8 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     return () => { cancelled = true; };
   }, []);
 
-  // Which questions have media. The source of truth is dictionary_of_media —
-  // the same table the player reads at render time — NOT all_questions.media_refs,
+  // Which questions have media. The source of truth is dictionary_of_media -
+  // the same table the player reads at render time, NOT all_questions.media_refs,
   // which is empty for the extracted sample tests and null for AI questions.
   // Presence of a row is all that counts: a broken or 404ing URL still counts
   // as "has media", which is what was asked for.
@@ -759,6 +761,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
         "uid, type, text, choice_1, choice_2, choice_3, choice_4, answer, subject, sub_category, difficulty, media_refs, source, status, extra_data",
         { count: "exact" }
       )
+      .order("uid")
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
     if (filterSubject)  q = q.eq("subject", filterSubject);
@@ -766,23 +769,36 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     if (filterCategory) q = q.eq("sub_category", filterCategory);
     if (filterSource)   q = q.eq("source", filterSource);
     // Prefix match on the UID. The underscore is escaped because it is a
-    // single-character wildcard in SQL LIKE — unescaped, "23B_%" would also
+    // single-character wildcard in SQL LIKE, unescaped, "23B_%" would also
     // match a UID like "23BX…".
     if (filterPacket)   q = q.like("uid", `${filterPacket}\\_%`);
     if (filterStatus)   q = q.eq("status", filterStatus);
     // Media lives in another table with no FK, so PostgREST cannot embed or
     // anti-join it. The UID set is resolved up front and applied here, which
-    // keeps .range() paging and the exact count correct — a client-side filter
+    // keeps .range() paging and the exact count correct, a client-side filter
     // would only sift the current page and report the unfiltered total.
+    // Known ceiling: the whole UID set goes into the query string, so this stops
+    // working once the media table outgrows the server's max URL length. Moving the
+    // join server-side (a has_media column or an RPC) is the real fix.
     if (filterMedia && mediaLoaded) {
       const list = [...mediaUids];
-      if (filterMedia === "yes") {
-        q = list.length > 0 ? q.in("uid", list) : q.eq("uid", "\u0000__none__");
+      if (filterMedia === "yes" && list.length === 0) {
+        // Nothing has media, so the result is empty by definition.
+        q = q.eq("uid", "__no_media_match__");
       } else if (list.length > 0) {
-        q = q.not("uid", "in", `(${list.map(u => `"${u}"`).join(",")})`);
+        if (filterMedia === "yes") {
+          q = q.in("uid", list);
+        } else {
+          q = q.not("uid", "in", `(${list.map(u => `"${u.replace(/"/g, '""')}"`).join(",")})`);
+        }
       }
     }
-    if (search.trim())  q = q.or(`uid.ilike.%${search.trim()}%,text.ilike.%${search.trim()}%`);
+    if (search.trim()) {
+      // PostgREST parses this value as a filter expression, so the LIKE wildcards and
+      // the characters that delimit the expression itself both have to be escaped.
+      const safe = search.trim().replace(/[\\%_]/g, c => `\\${c}`).replace(/[(),.:]/g, " ");
+      q = q.or(`uid.ilike.%${safe}%,text.ilike.%${safe}%`);
+    }
 
     const { data, count, error } = await q;
     if (error) {
@@ -810,7 +826,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
       .eq("uid", uid)
       .select("uid");
     if (error) { setFetchError(`Approve failed: ${error.message}`); return; }
-    if (!data || data.length === 0) { setFetchError("Approve blocked by RLS — run admin_rls_policies.sql in Supabase SQL Editor."); return; }
+    if (!data || data.length === 0) { setFetchError("Approve blocked by RLS, run admin_rls_policies.sql in Supabase SQL Editor."); return; }
     fetchQuestions();
   }
 
@@ -821,25 +837,29 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
       .eq("uid", uid)
       .select("uid");
     if (error) { setFetchError(`Reject failed: ${error.message}`); return; }
-    if (!data || data.length === 0) { setFetchError("Reject blocked by RLS — run admin_rls_policies.sql in Supabase SQL Editor."); return; }
+    if (!data || data.length === 0) { setFetchError("Reject blocked by RLS, run admin_rls_policies.sql in Supabase SQL Editor."); return; }
     fetchQuestions();
   }
 
   useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
 
+  const countLines = (v: unknown) =>
+    String(v ?? "").split(/[\n,]/).filter(x => x.trim()).length;
+  const previewShape = [
+    form.type,
+    [form.choice_1, form.choice_2, form.choice_3, form.choice_4, form.choice_5, form.choice_6]
+      .map(c => (String(c ?? "").trim() ? "1" : "0")).join(""),
+    form.nl_min, form.nl_max, form.nl_step,
+    countLines(form.tr_col_headers), countLines(form.tr_rows),
+    countLines(form.df_items), countLines(form.df_bins),
+    countLines(form.pss_sentences),
+    (String(form.span_passage ?? "").match(/\[SPAN_[A-Z]\]/g) ?? []).length,
+  ].join("|");
+
   useEffect(() => {
     setPreviewAnswer("");
     setPreviewResetKey(k => k + 1);
-  }, [
-    form.type, form.answer, form.text,
-    form.choice_1, form.choice_2, form.choice_3, form.choice_4,
-    form.choice_5, form.choice_6,
-    form.nl_min, form.nl_max, form.nl_step,
-    form.tr_col_headers, form.tr_rows,
-    form.variables,
-    form.df_items, form.df_bins,
-    form.pss_sentences, form.span_passage,
-  ]);
+  }, [previewShape]);
 
   // When navigated here from the Reports panel, auto-open the edit modal for the flagged question
   useEffect(() => {
@@ -856,7 +876,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
       }
       onEditHandled?.();
     })();
-  // openEdit is stable (defined with plain function, not useCallback) — intentionally omitted from deps
+  // openEdit is stable (defined with plain function, not useCallback), intentionally omitted from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialEditUid]);
 
@@ -872,7 +892,10 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
 
   function removeMediaItem(idx: number) {
     setMediaItems(prev => {
-      if (prev[idx].previewUrl && !prev[idx].isExisting) URL.revokeObjectURL(prev[idx].previewUrl);
+      const item = prev[idx];
+      if (item.previewUrl && !item.isExisting) URL.revokeObjectURL(item.previewUrl);
+      const existingId = item.isExisting ? (item._origId ?? item.mediaId) : null;
+      if (existingId) setRemovedMediaIds(ids => ids.includes(existingId) ? ids : [...ids, existingId]);
       return prev.filter((_, i) => i !== idx);
     });
   }
@@ -894,7 +917,6 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     setNewTopicName("");
     setMediaItems([]);
     setSaveError(null);
-    setShowPreview(false);
     setModalMode("add");
   }
 
@@ -932,7 +954,6 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     setNewTopicName("");
     setMediaItems([]);
     setSaveError(null);
-    setShowPreview(true);
     setModalMode("edit");
 
     // Use the SECURITY DEFINER RPC to bypass RLS on dictionary_of_media SELECT
@@ -967,6 +988,8 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
   }
 
   async function closeModal() {
+    if (saving) return;
+    setRemovedMediaIds([]);
     const wasFromReport = activeReportId !== null;
     if (activeReportId) {
       // Only advance pending→reviewed; never downgrade resolved or reviewed reports
@@ -986,12 +1009,12 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     setSaving(true);
     setSaveError(null);
 
-    // Duplicate media ID check — warn if two different items share the same ID (after bracket-stripping)
+    // Duplicate media ID check, warn if two different items share the same ID (after bracket-stripping)
     const nonEmptyIds = mediaItems.map(m => m.mediaId.trim().replace(/^\[(.+)\]$/, "$1")).filter(Boolean);
     const seen = new Set<string>();
     for (const id of nonEmptyIds) {
       if (seen.has(id)) {
-        setSaveError(`Duplicate media ID "${id}" — each media item must have a unique ID on this question.`);
+        setSaveError(`Duplicate media ID "${id}", each media item must have a unique ID on this question.`);
         setSaving(false);
         return;
       }
@@ -1010,6 +1033,13 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     const mediaRefsStr = mediaItems.map(m => m.mediaId.trim().replace(/^\[(.+)\]$/, "$1")).filter(Boolean).join(", ") || null;
 
     // Serialize virtual fields into extra_data JSONB
+    const EXTRA_DATA_TYPES = [
+      "multi-select", "expression", "number_line_click", "table_row_radio",
+      "drag_fill_multiple", "drag_to_bin", "drag_to_categorize",
+      "in_passage_sentence_select", "inline_text_span_click",
+    ];
+    const editorOwnsExtraData = EXTRA_DATA_TYPES.includes(form.type ?? "");
+
     const extraData: Record<string, unknown> | null = (() => {
       if (form.type === "multi-select") {
         const ed: Record<string, unknown> = {};
@@ -1066,7 +1096,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
       return null;
     })();
 
-    // Fields for all_questions — uid only used for INSERT, not in UPDATE SET
+    // Fields for all_questions, uid only used for INSERT, not in UPDATE SET
     const fields = {
       type: form.type ?? "mcq",
       subject: form.subject || null,
@@ -1080,10 +1110,12 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
       answer: form.answer,
       media_refs: mediaRefsStr,
       source: form.source || "bank",
-      extra_data: extraData,
+      extra_data: editorOwnsExtraData || form.type !== originalForm?.type
+        ? extraData
+        : ((originalForm?.extra_data as Record<string, unknown> | null) ?? null),
     };
 
-    // Topic tables only have the original core columns — exclude anything added later
+    // Topic tables only have the original core columns, exclude anything added later
     const topicPayload = {
       uid: form.uid,
       type: fields.type,
@@ -1097,7 +1129,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     };
 
     let allQErr: { message: string } | null = null;
-    let changedFields: Record<string, unknown> = {};
+    const changedFields: Record<string, unknown> = {};
 
     if (modalMode === "add") {
       const { error } = await supabase.from("all_questions").insert([{ uid: form.uid, ...fields }]);
@@ -1107,6 +1139,8 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
       const norm = (v: unknown, isRefs = false): unknown => {
         if (v === null || v === undefined || v === "") return null;
         if (isRefs) return String(v).split(/[,\s]+/).filter(Boolean).join(",");
+        // Objects have to be compared by value or they always look changed.
+        if (typeof v === "object") return JSON.stringify(v);
         return v;
       };
       for (const [key, newVal] of Object.entries(fields)) {
@@ -1141,7 +1175,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
         return;
       }
     } else {
-      // Edit mode: topic tables are best-effort — all_questions is already saved above.
+      // Edit mode: topic tables are best-effort, all_questions is already saved above.
       // AI-generated questions were never inserted into topic tables, so errors here are expected.
       const subCategoryChanged = originalSubCategory && originalSubCategory !== form.sub_category;
       if (subCategoryChanged) {
@@ -1162,7 +1196,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
     let mediaChanged = false;
     for (let i = 0; i < mediaItems.length; i++) {
       const item = mediaItems[i];
-      // Strip any accidental [brackets] — e.g. copied from choice text like [25A_Q86_NLA]
+      // Strip any accidental [brackets], e.g. copied from choice text like [25A_Q86_NLA]
       const cleanId = item.mediaId.trim().replace(/^\[(.+)\]$/, "$1");
 
       // Determine what changed
@@ -1189,7 +1223,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
             uploadErr.message.toLowerCase().includes("bucket") ||
             uploadErr.message.toLowerCase().includes("not found");
           if (isBucketMissing) {
-            // Bucket doesn't exist — try to create it, then retry upload
+            // Bucket doesn't exist, try to create it, then retry upload
             await supabase.storage.createBucket("Images", { public: true });
             const retry = await supabase.storage
               .from("Images")
@@ -1214,17 +1248,18 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
       } else if (item.media_type === "passage") {
         content = item.passageText.trim() || null;
       } else {
-        // Image type, no new file (type or ID changed) — keep the existing URL
+        // Image type, no new file (type or ID changed), keep the existing URL
         content = item.previewUrl || null;
       }
 
-      // If the media ID was renamed, delete the old record via RPC (bypasses RLS)
-      if (idChanged && item._origId) {
-        await supabase.rpc("delete_media_record", { p_media_id: item._origId });
+      if (content === null && item.isExisting) {
+        // Content was cleared. Remove the row rather than leaving the old value behind.
+        await supabase.rpc("delete_media_record", { p_media_id: item._origId ?? cleanId });
+        continue;
       }
 
       if (content !== null) {
-        // SECURITY DEFINER RPC bypasses RLS — works for both insert and update
+        // SECURITY DEFINER RPC bypasses RLS, works for both insert and update
         const { error: dictErr } = await supabase.rpc("upsert_media_record", {
           p_media_id:    cleanId,
           p_question_id: form.uid,
@@ -1238,8 +1273,21 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
           setSaving(false);
           return;
         }
+
+        if (idChanged && item._origId) {
+          await supabase.rpc("delete_media_record", { p_media_id: item._origId });
+        }
       }
     }
+
+    // Items the admin removed in the editor. Without this they stayed in
+    // dictionary_of_media and kept rendering for students.
+    for (const removedId of removedMediaIds) {
+      if (mediaItems.some(m => m.mediaId.trim().replace(/^\[(.+)\]$/, "$1") === removedId)) continue;
+      await supabase.rpc("delete_media_record", { p_media_id: removedId });
+      mediaChanged = true;
+    }
+    setRemovedMediaIds([]);
 
     if (modalMode === "edit") {
       // Immediately reflect the changes in the list without waiting for the network refetch
@@ -1273,11 +1321,16 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
       await supabase.from(deleteTarget.sub_category).delete().eq("uid", deleteTarget.uid);
     }
     setDeleteTarget(null);
-    fetchQuestions();
+    // Deleting the last row on the last page would otherwise leave `page` past the
+    // end, showing "no questions match" above a non-zero total.
+    const remaining = total - 1;
+    const lastPage = Math.max(0, Math.ceil(remaining / PAGE_SIZE) - 1);
+    if (page > lastPage) setPage(lastPage);
+    else fetchQuestions();
     setDeleting(false);
   }
 
-  // ── Preview derived data (mirrors mocktest.tsx choice-image logic) ─────────────
+  //  Preview derived data (mirrors mocktest.tsx choice-image logic)
   const previewChoiceImages: Record<string, string> = {};
   const previewChoiceMediaIds = new Set<string>();
 
@@ -1319,7 +1372,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-white">
-      {/* ── Toolbar ── */}
+      {/*  Toolbar  */}
       <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-200 flex items-center gap-2 sm:gap-3 flex-wrap shrink-0">
         <div className="shrink-0 mr-2">
           <h2 className="text-base font-bold text-zinc-900">Question Bank</h2>
@@ -1350,7 +1403,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
             // non-ELA types are always Math; auto-correct a conflicting English subject filter
             const mathOnlyTypes = ["grid-in", "linear_graphing", "multi-select", "expression", "number_line_click", "table_row_radio"];
             if (mathOnlyTypes.includes(t) && filterSubject === "english") setFilterSubject("");
-            // drag_fill types can be both — no auto-correct needed
+            // drag_fill types can be both, no auto-correct needed
           }}
           className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none transition-colors ${filterType ? "border-amber-400 text-amber-700 bg-amber-50 focus:border-amber-500" : "border-zinc-200 text-zinc-600 focus:border-amber-500/40"}`}>
           <option value="">All Types</option>
@@ -1442,7 +1495,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
         <div className="mx-5 mt-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-base text-red-400 shrink-0">{fetchError}</div>
       )}
 
-      {/* ── Table ── */}
+      {/*  Table  */}
       <div className="flex-1 overflow-auto">
         <table className="w-full text-base border-collapse">
           <thead className="sticky top-0 z-10 bg-white">
@@ -1471,13 +1524,13 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                     ? <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${q.subject === "english" ? "bg-blue-500/10 text-blue-500" : "bg-violet-500/10 text-violet-500"}`}>
                         {q.subject === "english" ? "English" : "Math"}
                       </span>
-                    : <span className="text-zinc-400 text-sm">—</span>}
+                    : <span className="text-zinc-400 text-sm">-</span>}
                 </td>
                 <td className="px-4 py-3 align-top">
                   <TypeBadge type={q.type} source={q.source} />
                 </td>
-                <td className="px-4 py-3 font-mono text-sm text-zinc-500 whitespace-nowrap align-top">{q.sub_category ?? "—"}</td>
-                <td className="px-4 py-3 text-sm text-zinc-500 capitalize align-top">{q.difficulty ?? "—"}</td>
+                <td className="px-4 py-3 font-mono text-sm text-zinc-500 whitespace-nowrap align-top">{q.sub_category ?? "-"}</td>
+                <td className="px-4 py-3 text-sm text-zinc-500 capitalize align-top">{q.difficulty ?? "-"}</td>
                 <td className="px-4 py-3 align-top whitespace-nowrap">
                   {!mediaLoaded ? (
                     <span className="text-zinc-300 text-sm">…</span>
@@ -1548,7 +1601,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
         </table>
       </div>
 
-      {/* ── Pagination ── */}
+      {/*  Pagination  */}
       <div className="px-6 py-3 border-t border-zinc-200 flex items-center justify-between shrink-0">
         <span className="text-sm text-zinc-400">
           {total === 0 ? "No results" : `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)} of ${total}`}
@@ -1566,7 +1619,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
         </div>
       </div>
 
-      {/* ── Generate AI Questions Modal ── */}
+      {/*  Generate AI Questions Modal  */}
       {showGenerate && (
         <GenerateModal
           onClose={() => setShowGenerate(false)}
@@ -1574,7 +1627,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
         />
       )}
 
-      {/* ── Add / Edit Modal ── */}
+      {/*  Add / Edit Modal  */}
       {modalMode && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-zinc-200 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col">
@@ -1594,7 +1647,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
             </div>
 
             <div className="flex flex-1 overflow-hidden min-h-0">
-            {/* ── Left: form ── */}
+            {/*  Left: form  */}
             <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5 border-r border-zinc-200 min-w-0">
               <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1.5">
@@ -1604,7 +1657,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                 <div className="flex flex-col gap-1.5">
                   <Label>Subject</Label>
                   <Select value={form.subject ?? ""} onChange={v => setField("subject", v)} title="Subject">
-                    <option value="">—</option>
+                    <option value="">-</option>
                     <option value="english">English</option>
                     <option value="math">Math</option>
                   </Select>
@@ -1667,7 +1720,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                     </div>
                   ) : (
                     <Select value={form.sub_category ?? ""} onChange={v => setField("sub_category", v)} title="Topic table">
-                      <option value="">— select topic —</option>
+                      <option value="">Select a topic</option>
                       {categories.map(c => <option key={c} value={c}>{c}</option>)}
                     </Select>
                   )}
@@ -1675,7 +1728,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                 <div className="flex flex-col gap-1.5">
                   <Label>Difficulty</Label>
                   <Select value={form.difficulty ?? ""} onChange={v => setField("difficulty", v)} title="Difficulty">
-                    <option value="">—</option>
+                    <option value="">-</option>
                     <option value="easy">Easy</option>
                     <option value="medium">Medium</option>
                     <option value="hard">Hard</option>
@@ -1710,7 +1763,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                 )}
               </div>
 
-              {/* Answer choices — MCQ, multi-select, inline-dropdown, and drag fill types */}
+              {/* Answer choices, MCQ, multi-select, inline-dropdown, and drag fill types */}
               {(form.type === "mcq" || form.type === "multi-select" || form.type === "inline-dropdown" ||
                 form.type === "drag_fill_single" || form.type === "drag_fill_multiple") && (
                 <div className="flex flex-col gap-2.5">
@@ -1758,7 +1811,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                         type="number"
                         readOnly
                         value={(form.select_count as string) ?? ""}
-                        placeholder="Auto — set by answer"
+                        placeholder="Auto: set by answer"
                         className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-base text-zinc-500 placeholder-zinc-400 font-mono cursor-default"
                       />
                     </div>
@@ -1995,7 +2048,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                       One letter per blank in order, comma-separated.
                       {(() => {
                         const blanks = (form.text ?? "").match(/\[BLANK_\d+\]/g) ?? [];
-                        return blanks.length > 0 ? ` (${blanks.length} blank${blanks.length !== 1 ? "s" : ""} in text)` : " — add [BLANK_1], [BLANK_2], … to the text above.";
+                        return blanks.length > 0 ? ` (${blanks.length} blank${blanks.length !== 1 ? "s" : ""} in text)` : " Add [BLANK_1], [BLANK_2], … to the text above.";
                       })()}
                     </p>
                   </div>
@@ -2052,7 +2105,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                 )}
               </div>
 
-              {/* Media — not relevant for these non-choice types */}
+              {/* Media, not relevant for these non-choice types */}
               {form.type !== "linear_graphing" && form.type !== "number_line_click" && form.type !== "table_row_radio" && (
                 <div className="flex flex-col gap-2.5">
                   <div className="flex items-center justify-between">
@@ -2099,7 +2152,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                               )}
                               {item.previewUrl && (
                                 <p className="hidden text-xs text-red-500 bg-red-50 border border-red-200 rounded px-2 py-1 break-all">
-                                  Image failed to load — re-upload the file. URL: {item.previewUrl}
+                                  Image failed to load: re-upload the file. URL: {item.previewUrl}
                                 </p>
                               )}
                               <input type="file" accept="image/*" title="Upload image" placeholder="Upload image"
@@ -2132,7 +2185,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
               )}
             </div>{/* end left form column */}
 
-            {/* ── Right: interactive preview ── */}
+            {/*  Right: interactive preview  */}
             <div className="w-80 shrink-0 flex flex-col overflow-hidden bg-slate-50 border-l border-zinc-200">
               {/* Header */}
               <div className="px-4 py-3 border-b border-zinc-200 bg-white shrink-0 flex items-center justify-between gap-2">
@@ -2146,7 +2199,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                     <p className="text-xs text-zinc-400">Test it as a student would</p>
                   </div>
                 </div>
-                {/* Live feedback badge — fades in when admin answers */}
+                {/* Live feedback badge, fades in when admin answers */}
                 <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full transition-all duration-200 ${
                   previewResult === true
                     ? "bg-emerald-100 text-emerald-700 opacity-100 scale-100"
@@ -2180,11 +2233,11 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                           <img key={item.previewUrl} src={item.previewUrl} alt={item.mediaId} className="max-w-full h-auto mx-auto"
                             onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; (e.currentTarget.nextElementSibling as HTMLElement | null)?.style.setProperty("display", "block"); }}
                           />
-                          <p className="hidden text-xs text-red-500 mt-1">⚠ Image failed — re-upload via Edit</p>
+                          <p className="hidden text-xs text-red-500 mt-1">⚠ Image failed, re-upload via Edit</p>
                         </div>
                       ) : (
                         <div key={idx} className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700 font-mono">
-                          ⚠ {item.mediaId} — not uploaded yet
+                          ⚠ {item.mediaId}: not uploaded yet
                         </div>
                       )
                     ))}
@@ -2204,7 +2257,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                     : <span className="text-zinc-400 italic">No question text yet.</span>}
                 </div>
 
-                {/* ── MCQ ── */}
+                {/*  MCQ  */}
                 {form.type === "mcq" && (
                   <MCQuestion
                     key={previewResetKey}
@@ -2219,7 +2272,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   />
                 )}
 
-                {/* ── Grid-in ── */}
+                {/*  Grid-in  */}
                 {form.type === "grid-in" && (
                   <GridInQuestion
                     key={previewResetKey}
@@ -2229,7 +2282,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   />
                 )}
 
-                {/* ── Multi-select ── */}
+                {/*  Multi-select  */}
                 {form.type === "multi-select" && (() => {
                   const opts = (
                     [form.choice_1, form.choice_2, form.choice_3, form.choice_4, form.choice_5, form.choice_6] as (string | undefined)[]
@@ -2247,7 +2300,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   );
                 })()}
 
-                {/* ── Expression ── */}
+                {/*  Expression  */}
                 {form.type === "expression" && (
                   <ExpressionEditorQuestion
                     key={previewResetKey}
@@ -2257,7 +2310,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   />
                 )}
 
-                {/* ── Inline-dropdown ── */}
+                {/*  Inline-dropdown  */}
                 {form.type === "inline-dropdown" && (() => {
                   const hasBlank = (form.text ?? "").includes("[BLANK]");
                   if (!hasBlank) return (
@@ -2278,7 +2331,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   );
                 })()}
 
-                {/* ── Linear graphing ── */}
+                {/*  Linear graphing  */}
                 {form.type === "linear_graphing" && (
                   <div className="overflow-x-auto -mx-1 px-1">
                     <SHSATGrapher
@@ -2289,7 +2342,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   </div>
                 )}
 
-                {/* ── Table row radio ── */}
+                {/*  Table row radio  */}
                 {form.type === "table_row_radio" && (() => {
                   const cols = (form.tr_col_headers as string ?? "")
                     .split(",").map((s: string) => s.trim()).filter(Boolean);
@@ -2312,7 +2365,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   );
                 })()}
 
-                {/* ── Number line click ── */}
+                {/*  Number line click  */}
                 {form.type === "number_line_click" && (
                   <div className="overflow-x-auto -mx-1 px-1">
                     <NumberLineClick
@@ -2326,7 +2379,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   </div>
                 )}
 
-                {/* ── Drag fill single ── */}
+                {/*  Drag fill single  */}
                 {form.type === "drag_fill_single" && form.text?.includes("[BLANK]") && (
                   <DragFillSingle
                     key={previewResetKey}
@@ -2340,7 +2393,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   <p className="text-sm text-zinc-400 italic">Add <code className="bg-zinc-100 px-1 rounded font-mono">[BLANK]</code> to the question text and token tiles A–D to see the preview.</p>
                 )}
 
-                {/* ── Drag fill multiple ── */}
+                {/*  Drag fill multiple  */}
                 {form.type === "drag_fill_multiple" && /\[BLANK_\d+\]/.test(form.text ?? "") && (
                   <DragFillMultiple
                     key={previewResetKey}
@@ -2357,7 +2410,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   <p className="text-sm text-zinc-400 italic">Add <code className="bg-zinc-100 px-1 rounded font-mono">[BLANK_1]</code>, <code className="bg-zinc-100 px-1 rounded font-mono">[BLANK_2]</code>, … to the text and token tiles A–D to see the preview.</p>
                 )}
 
-                {/* ── Drag to bin ── */}
+                {/*  Drag to bin  */}
                 {form.type === "drag_to_bin" && (() => {
                   const items = (form.df_items as string ?? "").split("\n").map((s: string) => s.trim()).filter(Boolean);
                   const bins  = (form.df_bins  as string ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
@@ -2375,7 +2428,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   );
                 })()}
 
-                {/* ── Drag to categorize ── */}
+                {/*  Drag to categorize  */}
                 {form.type === "drag_to_categorize" && (() => {
                   const items = (form.df_items as string ?? "").split("\n").map((s: string) => s.trim()).filter(Boolean);
                   const bins  = (form.df_bins  as string ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
@@ -2423,7 +2476,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   );
                 })()}
 
-                {/* ── Answer key + reset footer ── */}
+                {/*  Answer key + reset footer  */}
                 {form.answer && (
                   <div className="mt-2 pt-3 border-t border-slate-200 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">

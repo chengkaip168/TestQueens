@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext, useCallback } from "react";
+import { useEffect, useState, useContext, useCallback, useRef } from "react";
 import { supabase } from "../supabase-client";
 import { UserContext } from "./userContext";
 
@@ -89,6 +89,7 @@ export default function AdminTokensPanel() {
   const [tokens, setTokens]                   = useState<TokenRow[]>([]);
   const [loading, setLoading]                 = useState(true);
   const [generating, setGenerating]           = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [copiedId, setCopiedId]               = useState<string | null>(null);
   const [deactivatingId, setDeactivatingId]   = useState<string | null>(null);
   const [filter, setFilter]                   = useState<"all" | TokenStatus>("all");
@@ -138,9 +139,16 @@ export default function AdminTokensPanel() {
   }
 
   async function copyToken(id: string, token: string) {
-    await navigator.clipboard.writeText(token);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    try {
+      await navigator.clipboard.writeText(token);
+      setCopiedId(id);
+    } catch {
+      setCopiedId(null);
+      window.prompt("Copy this signup token:", token);
+      return;
+    }
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopiedId(null), 2000);
   }
 
   async function handleDeactivate(id: string) {
@@ -166,7 +174,7 @@ export default function AdminTokensPanel() {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-white">
 
-      {/* ── Header ── */}
+      {/*  Header  */}
       <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-200 flex flex-col gap-2.5 shrink-0">
         {/* Row 1: title + generate */}
         <div className="flex items-start justify-between gap-3">
@@ -210,7 +218,7 @@ export default function AdminTokensPanel() {
         </div>
       </div>
 
-      {/* ── Content ── */}
+      {/*  Content  */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center h-48">
@@ -227,7 +235,7 @@ export default function AdminTokensPanel() {
           </div>
         ) : (
           <>
-            {/* ── Mobile card list (below md) ── */}
+            {/*  Mobile card list (below md)  */}
             <div className="md:hidden divide-y divide-zinc-100">
               {visible.map(row => {
                 const status  = getStatus(row);
@@ -289,7 +297,7 @@ export default function AdminTokensPanel() {
               })}
             </div>
 
-            {/* ── Desktop table (md+) ── */}
+            {/*  Desktop table (md+)  */}
             <table className="hidden md:table w-full text-base border-collapse">
               <thead>
                 <tr className="border-b border-zinc-200">
@@ -376,7 +384,7 @@ export default function AdminTokensPanel() {
                             {row.used_at && <span className="text-xs text-zinc-300">{fmt(row.used_at)}</span>}
                           </div>
                         ) : (
-                          <span className="text-zinc-300 text-sm">—</span>
+                          <span className="text-zinc-300 text-sm">-</span>
                         )}
                       </td>
 

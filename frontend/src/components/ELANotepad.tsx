@@ -12,7 +12,7 @@ export default function ELANotepad({ open, notes, onNotesChange, onClose }: Prop
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ left: 24, top: 120 });
 
-  function onDragStart(e: React.MouseEvent) {
+  function onDragStart(e: React.PointerEvent) {
     if ((e.target as HTMLElement).tagName === "TEXTAREA") return;
     dragRef.current = {
       startX: e.clientX,
@@ -21,21 +21,27 @@ export default function ELANotepad({ open, notes, onNotesChange, onClose }: Prop
       initTop: pos.top,
     };
     e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
 
-    function onMove(ev: MouseEvent) {
-      if (!dragRef.current) return;
-      setPos({
-        left: Math.max(0, dragRef.current.initLeft + ev.clientX - dragRef.current.startX),
-        top: Math.max(0, dragRef.current.initTop + ev.clientY - dragRef.current.startY),
-      });
+  function onDragMove(e: React.PointerEvent) {
+    if (!dragRef.current) return;
+    const panel = panelRef.current;
+    // Clamp to the viewport, leaving a grab strip visible. Previously the panel
+    // could be dragged off-screen with no way to bring it back.
+    const maxLeft = Math.max(0, window.innerWidth - (panel?.offsetWidth ?? 0));
+    const maxTop = Math.max(0, window.innerHeight - 40);
+    setPos({
+      left: Math.min(maxLeft, Math.max(0, dragRef.current.initLeft + e.clientX - dragRef.current.startX)),
+      top: Math.min(maxTop, Math.max(0, dragRef.current.initTop + e.clientY - dragRef.current.startY)),
+    });
+  }
+
+  function onDragEnd(e: React.PointerEvent) {
+    dragRef.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
     }
-    function onUp() {
-      dragRef.current = null;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    }
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
   }
 
   if (!open) return null;
@@ -46,10 +52,13 @@ export default function ELANotepad({ open, notes, onNotesChange, onClose }: Prop
       style={{ left: pos.left, top: pos.top, zIndex: 50 }}
       className="fixed w-64 sm:w-80 bg-amber-50 border border-amber-200 rounded-2xl shadow-xl flex flex-col overflow-hidden"
     >
-      {/* Header — drag handle */}
+      {/* Header, drag handle */}
       <div
-        className="flex items-center justify-between px-3 py-2 bg-amber-400/20 border-b border-amber-200 cursor-grab active:cursor-grabbing select-none"
-        onMouseDown={onDragStart}
+        className="flex items-center justify-between px-3 py-2 bg-amber-400/20 border-b border-amber-200 cursor-grab active:cursor-grabbing select-none touch-none"
+        onPointerDown={onDragStart}
+        onPointerMove={onDragMove}
+        onPointerUp={onDragEnd}
+        onPointerCancel={onDragEnd}
       >
         <div className="flex items-center gap-2">
           <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

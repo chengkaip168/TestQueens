@@ -4,6 +4,7 @@ import { supabase } from "../supabase-client";
 import ResultsModal from "./ResultsModal";
 import { fetchIncorrectReport, fetchFullIncorrectReport, exportIncorrectPDF } from "../utils/exportIncorrectPDF";
 import { fmtSubEN } from "../utils/translations";
+import { MOCK_TEST_QUESTIONS } from "../utils/testConfig";
 
 interface Tutor {
   id: string;
@@ -248,6 +249,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
 
   async function selectStudent(s: Student) {
     setSelected(s);
+    setSelectedGroup(null);
     setSidebarTab("students");
     setTests([]);
     setAssignments([]);
@@ -559,15 +561,18 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
   }
 
   async function saveGroupAssignment() {
-    if (!selectedGroup) return;
-    const numQ = assignForm.test_type === "practice" ? parseInt(assignForm.num_questions, 10) : 114;
+    if (!selectedGroup || assignSaving) return;
+    setAssignSaving(true);
+    const numQ = assignForm.test_type === "practice" ? parseInt(assignForm.num_questions, 10) : MOCK_TEST_QUESTIONS;
     if (assignForm.test_type === "practice" && (isNaN(numQ) || numQ < 1 || !Number.isInteger(numQ))) {
       setAssignError("# of questions must be a positive whole number.");
+      setAssignSaving(false);
       return;
     }
     const durMin = assignForm.timed ? parseInt(assignForm.dur_h, 10) * 60 + parseInt(assignForm.dur_m, 10) : null;
     if (assignForm.timed && (!durMin || durMin <= 0)) {
       setAssignError("Duration must be greater than 0 minutes.");
+      setAssignSaving(false);
       return;
     }
     // Derive subjects from selected sub-categories to prevent cross-subject question bleed.
@@ -583,12 +588,11 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
       if (shouldFilterSubject) countQ = countQ.in("subject", selectedSubjects);
       const { count } = await countQ;
       const available = count ?? 0;
-      if (available === 0) { setAssignError("No approved questions found for the selected categories."); return; }
+      if (available === 0) { setAssignError("No approved questions found for the selected categories."); setAssignSaving(false); return; }
       if (available < numQ) setAssignWarning(`Only ${available} question${available === 1 ? "" : "s"} available (requested ${numQ}). Test will end when questions run out.`);
       else setAssignWarning(null);
     } else setAssignWarning(null);
 
-    setAssignSaving(true);
     setAssignError(null);
     const { data: { user: adminUser } } = await supabase.auth.getUser();
     const dueDate = assignForm.due_date ? new Date(`${assignForm.due_date}T${assignForm.due_time || "23:59"}:00`).toISOString() : null;
@@ -756,15 +760,18 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
 
   async function saveAssignment() {
     if (assignTarget === "group") return saveGroupAssignment();
-    if (!selected) return;
-    const numQ = assignForm.test_type === "practice" ? parseInt(assignForm.num_questions, 10) : 114;
+    if (!selected || assignSaving) return;
+    setAssignSaving(true);
+    const numQ = assignForm.test_type === "practice" ? parseInt(assignForm.num_questions, 10) : MOCK_TEST_QUESTIONS;
     if (assignForm.test_type === "practice" && (isNaN(numQ) || numQ < 1 || !Number.isInteger(numQ))) {
       setAssignError("# of questions must be a positive whole number.");
+      setAssignSaving(false);
       return;
     }
     const durMin = assignForm.timed ? parseInt(assignForm.dur_h, 10) * 60 + parseInt(assignForm.dur_m, 10) : null;
     if (assignForm.timed && (!durMin || durMin <= 0)) {
       setAssignError("Duration must be greater than 0 minutes.");
+      setAssignSaving(false);
       return;
     }
     // Derive which subjects the selected sub-categories belong to so queries never
@@ -788,6 +795,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
       const available = count ?? 0;
       if (available === 0) {
         setAssignError("No approved questions found for the selected categories. Choose different categories.");
+        setAssignSaving(false);
         return;
       }
       if (available < numQ) {
@@ -799,7 +807,6 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
       setAssignWarning(null);
     }
 
-    setAssignSaving(true);
     setAssignError(null);
     const { data: { user: adminUser } } = await supabase.auth.getUser();
     const allStudentIds = [selected.id, ...Array.from(additionalStudentIds)];
@@ -897,7 +904,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
   return (
     <div className="flex h-full overflow-hidden">
 
-      {/* ── Sidebar: Students + Groups (tabbed) ── */}
+      {/*  Sidebar: Students + Groups (tabbed)  */}
       <div className={`${selected || selectedGroup ? "hidden lg:flex" : "flex"} w-full lg:w-56 xl:w-64 shrink-0 flex-col border-r border-zinc-200 bg-white`}>
 
         {/* Tab bar */}
@@ -1029,7 +1036,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
         )}
       </div>
 
-      {/* ── Detail panel ── */}
+      {/*  Detail panel  */}
       <div className={`${!selected && !selectedGroup ? "hidden lg:flex lg:flex-col" : "flex flex-col"} flex-1 overflow-y-auto bg-white`}>
         {!selected && !selectedGroup ? (
           <div className="flex h-full items-center justify-center">
@@ -1041,7 +1048,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
             </div>
           </div>
         ) : selectedGroup ? (
-          /* ── Group detail view ── */
+          /*  Group detail view */
           <div className="p-4 sm:p-6 flex flex-col gap-5 max-w-4xl">
             {/* Back button */}
             <button type="button" onClick={() => setSelectedGroup(null)} className="lg:hidden flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-800 -mb-1">
@@ -1135,7 +1142,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
                 <div className="bg-zinc-50 rounded-xl border border-zinc-200 px-5 py-4 text-center text-sm text-zinc-400">No members yet. Click "Add" to add students.</div>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {groupMembers.sort((a, b) => `${a.first_name}${a.last_name}`.localeCompare(`${b.first_name}${b.last_name}`)).map(m => (
+                  {[...groupMembers].sort((a, b) => `${a.first_name}${a.last_name}`.localeCompare(`${b.first_name}${b.last_name}`)).map(m => (
                     <div key={m.id} className="bg-zinc-50 rounded-xl border border-zinc-200 px-4 py-3 flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center text-sm font-bold text-zinc-500 shrink-0">
                         {m.first_name[0]}{m.last_name[0]}
@@ -1253,7 +1260,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
                                 {ga.question_ids && <span className="text-xs text-teal-600 font-medium">· Pre-seeded {ga.question_ids.length} Qs</span>}
                               </div>
                               <div className="text-sm text-zinc-600 flex flex-wrap gap-x-3 gap-y-0.5">
-                                <span>{ga.test_type === "mock" ? "114 questions" : `${ga.num_questions ?? "?"} questions`}</span>
+                                <span>{`${ga.num_questions ?? MOCK_TEST_QUESTIONS} questions`}</span>
                                 {ga.duration_minutes ? <span>· {Math.floor(ga.duration_minutes / 60) > 0 ? `${Math.floor(ga.duration_minutes / 60)}h ` : ""}{ga.duration_minutes % 60 > 0 ? `${ga.duration_minutes % 60}m` : ""} limit</span> : null}
                                 {ga.due_date && <span className={isDue ? "text-rose-500 font-medium" : "text-zinc-400"}>· Due {new Date(ga.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>}
                               </div>
@@ -1286,7 +1293,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
           </div>
         ) : (
           <div className="p-4 sm:p-6 flex flex-col gap-5 max-w-4xl">
-            {/* Back button — shown below lg only */}
+            {/* Back button, shown below lg only */}
             <button
               type="button"
               onClick={() => setSelected(null)}
@@ -1298,7 +1305,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
               All Students
             </button>
 
-            {/* ── Student header card ── */}
+            {/*  Student header card  */}
             <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4 sm:p-5">
               {/* Avatar + name row */}
               <div className="flex items-center gap-3">
@@ -1315,7 +1322,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
                   </div>
                 </div>
               </div>
-              {/* Stats row — always below the name */}
+              {/* Stats row, always below the name */}
               <div className="flex gap-4 mt-3 pt-3 border-t border-zinc-200">
                 <div>
                   <span className="text-xl font-bold text-zinc-900">{tests.length}</span>
@@ -1411,7 +1418,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
               </div>
             </div>
 
-            {/* ── Linked parents ── */}
+            {/*  Linked parents  */}
             {linkedParents.length > 0 && (
               <div className="bg-zinc-50 rounded-xl border border-zinc-200 px-5 py-4">
                 <p className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">Linked Parents</p>
@@ -1429,7 +1436,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
               </div>
             )}
 
-            {/* ── Assigned Tutors ── */}
+            {/*  Assigned Tutors  */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-bold uppercase tracking-widest text-zinc-400">Assigned Tutors</p>
@@ -1473,7 +1480,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
               )}
             </div>
 
-            {/* ── Assigned Work ── */}
+            {/*  Assigned Work  */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-bold uppercase tracking-widest text-zinc-400">Assigned Work</p>
@@ -1533,7 +1540,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
                               )}
                             </div>
                             <div className="text-sm text-zinc-600 flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                              <span>{a.test_type === "mock" ? "114 questions" : `${a.num_questions ?? "?"} questions`}</span>
+                              <span>{`${a.num_questions ?? MOCK_TEST_QUESTIONS} questions`}</span>
                               {a.duration_minutes && <span>· {Math.floor(a.duration_minutes / 60) > 0 ? `${Math.floor(a.duration_minutes / 60)}h ` : ""}{a.duration_minutes % 60 > 0 ? `${a.duration_minutes % 60}m` : ""} limit</span>}
                               {a.due_date && <span className={isDue && !isCompleted ? "text-rose-500 font-medium" : "text-zinc-400"}>· Due {new Date(a.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>}
                             </div>
@@ -1577,7 +1584,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
               )}
             </div>
 
-            {/* ── Test history ── */}
+            {/*  Test history  */}
             <div>
               <p className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">Test & Practice History</p>
               {loadingTests ? (
@@ -1600,7 +1607,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
 
                         {/* Row header */}
                         <div className="px-4 py-3 flex flex-col gap-2">
-                          {/* Test name — always full width */}
+                          {/* Test name, always full width */}
                           <button
                             type="button"
                             onClick={() => expandTest(test)}
@@ -1619,7 +1626,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
                             </p>
                           </button>
 
-                          {/* Actions row — status + buttons all on one line */}
+                          {/* Actions row, status + buttons all on one line */}
                           <div className="flex items-center gap-2 flex-wrap">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full border shrink-0 ${
                             test.score !== null
@@ -1680,7 +1687,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
                             <div className="flex gap-1 ml-auto shrink-0">
                               <button
                                 type="button"
-                                title="Reset test — clears all answers so student can retake"
+                                title="Reset test: clears all answers so student can retake"
                                 onClick={() => setTestConfirm({ id: test.id, action: "reset" })}
                                 className="px-2 py-1 rounded-lg text-xs font-medium text-zinc-400 hover:text-amber-500 hover:bg-amber-500/8 border border-transparent hover:border-amber-500/20 transition-colors"
                               >
@@ -1745,7 +1752,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
         )}
       </div>
 
-      {/* ── Results Modal ── */}
+      {/*  Results Modal  */}
       {resultsModal && (
         <ResultsModal
           testID={resultsModal.testID}
@@ -1755,7 +1762,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
         />
       )}
 
-      {/* ── Assign Work Modal ── */}
+      {/*  Assign Work Modal  */}
       {showAssignModal && (selected || selectedGroup) && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-zinc-200 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col overflow-y-auto max-h-[92vh]">
@@ -1782,7 +1789,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
                       onClick={() => setAssignForm(f => ({ ...f, test_type: t }))}
                       className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border transition-colors ${assignForm.test_type === t ? "bg-amber-500 text-zinc-950 border-amber-500" : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:border-zinc-300"}`}
                     >
-                      {t === "mock" ? "Mock Test (114 Qs)" : "Practice"}
+                      {t === "mock" ? `Mock Test (${MOCK_TEST_QUESTIONS} Qs)` : "Practice"}
                     </button>
                   ))}
                 </div>
@@ -1934,7 +1941,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
                 />
               </label>
 
-              {/* Also assign to — only for individual student assignments */}
+              {/* Also assign to, only for individual student assignments */}
               {assignTarget === "student" && selected && students.filter(s => s.id !== selected.id).length > 0 && (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
@@ -1991,7 +1998,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
         </div>
       )}
 
-      {/* ── Create Group Modal (admin only) ── */}
+      {/*  Create Group Modal (admin only)  */}
       {showCreateGroupModal && isAdmin && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-zinc-200 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col">
@@ -2013,7 +2020,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
         </div>
       )}
 
-      {/* ── Add Member to Group Modal ── */}
+      {/*  Add Member to Group Modal  */}
       {showAddMemberModal && selectedGroup && (() => {
         const alreadyMemberIds = new Set(groupMembers.map(m => m.id));
         const available = students.filter(s => !alreadyMemberIds.has(s.id))
@@ -2052,7 +2059,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
         );
       })()}
 
-      {/* ── Add Tutor to Group Modal (admin only) ── */}
+      {/*  Add Tutor to Group Modal (admin only)  */}
       {showAddGroupTutorModal && selectedGroup && isAdmin && (() => {
         const alreadyTutorIds = new Set(groupTutors.map(t => t.tutor_id));
         const available = tutors.filter(t => !alreadyTutorIds.has(t.id));
@@ -2089,7 +2096,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
         );
       })()}
 
-      {/* ── Add Tutor Modal ── */}
+      {/*  Add Tutor Modal  */}
       {showTutorModal && selected && isAdmin && (() => {
         const available = tutors.filter(t => !selected.tutors.some(st => st.id === t.id));
         return (
@@ -2146,7 +2153,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
         );
       })()}
 
-      {/* ── Edit Profile Modal ── */}
+      {/*  Edit Profile Modal  */}
       {editingProfile && selected && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-zinc-200 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col">

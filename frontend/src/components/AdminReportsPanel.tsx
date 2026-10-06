@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../supabase-client";
 import { fmtSubEN } from "../utils/translations";
+import { parseFormattedText } from "../utils/textParser";
 
 interface Report {
   id: string;
@@ -52,18 +53,18 @@ const STATUS_STYLE: Record<string, string> = {
 function stripPrefix(s: string) { return s.replace(/^[A-Ha-h][).:\s]\s*/, ""); }
 const LETTERS = ["A", "B", "C", "D"];
 
-// ── Filter + export helpers ───────────────────────────────────────────────────
+//  Filter + export helpers
 
 // The packet is the UID segment before the first underscore: "23A_Q5" -> "23A",
 // "STA_Q1" -> "STA", "ai_Q12" -> "ai". It cannot come from all_questions.source,
-// which only ever holds bank / ai / STA–STD — never a year code like 23A.
+// which only ever holds bank / ai / STA–STD, never a year code like 23A.
 function packetOf(uid: string | null): string {
   if (!uid) return "";
   const i = uid.indexOf("_");
   return i === -1 ? uid : uid.slice(0, i);
 }
 
-// "2026-09" — sortable key; label is rendered separately.
+// "2026-09", sortable key; label is rendered separately.
 function monthKeyOf(iso: string): string {
   const d = new Date(iso);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -100,7 +101,7 @@ const EXPORT_FIELDS: { key: string; label: string; get: (r: ExportRow) => string
   { key: "report_id",     label: "Report ID",      get: r => r.id },
 ];
 
-// Fields that require a join to all_questions — the reports table has none of them.
+// Fields that require a join to all_questions, the reports table has none of them.
 const QUESTION_FIELDS = new Set(["question_text", "sub_category", "answer"]);
 
 const DEFAULT_EXPORT_FIELDS = new Set([
@@ -108,7 +109,24 @@ const DEFAULT_EXPORT_FIELDS = new Set([
   "question_uid", "question_text", "reason", "description", "status",
 ]);
 
-// ── Question preview card ──────────────────────────────────────────────────────
+//  Question preview card
+
+const TYPE_LABEL: Record<string, string> = {
+  "mcq": "MCQ",
+  "grid-in": "Grid-in",
+  "linear_graphing": "Graphing",
+  "multi-select": "Multi-select",
+  "expression": "Expression",
+  "inline-dropdown": "Inline Dropdown",
+  "number_line_click": "Number Line",
+  "table_row_radio": "Table Radio",
+  "drag_fill_single": "Drag Fill",
+  "drag_fill_multiple": "Drag Fill xN",
+  "drag_to_bin": "Drag to Bin",
+  "drag_to_categorize": "Categorize",
+  "in_passage_sentence_select": "Sentence Select",
+  "inline_text_span_click": "Span Click",
+};
 
 function QuestionPreviewCard({
   q, onEdit, onDeleteQuestion, isAdmin = true,
@@ -121,9 +139,19 @@ function QuestionPreviewCard({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const isGraphing = q.type === "linear_graphing";
   const isGridIn   = q.type === "grid-in";
-  const choices = (isGraphing || isGridIn)
-    ? []
-    : [q.choice_1, q.choice_2, q.choice_3, q.choice_4].filter(Boolean) as string[];
+  // Types whose answer is a letter-keyed choice list. Everything else just shows
+  // its raw stored answer rather than being rendered as something it is not.
+  const CHOICE_TYPES = ["mcq", "multi-select", "inline-dropdown", "inline_text_span_click"];
+  const choices = CHOICE_TYPES.includes(q.type)
+    // Keep the original index: filtering first renumbers the list, so a question
+    // with an empty choice_2 would label C as B and mark the wrong one correct.
+    ? [q.choice_1, q.choice_2, q.choice_3, q.choice_4]
+        .map((c, i) => ({ c, i }))
+        .filter(({ c }) => (c ?? "").trim() !== "")
+    : [];
+  const correctLetters = new Set(
+    (q.answer ?? "").split(",").map(x => x.trim().toUpperCase()).filter(Boolean)
+  );
 
   return (
     <div className="bg-white border border-zinc-200 rounded-xl p-4 flex flex-col gap-3">
@@ -134,9 +162,10 @@ function QuestionPreviewCard({
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
             q.type === "mcq" ? "bg-zinc-100 text-zinc-500"
             : q.type === "grid-in" ? "bg-amber-500/10 text-amber-600"
-            : "bg-blue-500/10 text-blue-600"
+            : isGraphing ? "bg-blue-500/10 text-blue-600"
+            : "bg-violet-500/10 text-violet-600"
           }`}>
-            {q.type === "mcq" ? "MCQ" : q.type === "grid-in" ? "Grid-in" : "Graphing"}
+            {TYPE_LABEL[q.type] ?? q.type}
           </span>
           {q.sub_category && (
             <span className="text-xs text-zinc-400 truncate">{fmtSubEN(q.sub_category)}</span>
@@ -183,14 +212,14 @@ function QuestionPreviewCard({
       </div>
 
       {/* Question text */}
-      <p className="text-sm text-zinc-800 leading-relaxed">{q.text}</p>
+      <p className="text-sm text-zinc-800 leading-relaxed">{parseFormattedText(q.text ?? "")}</p>
 
       {/* MCQ choices */}
       {choices.length > 0 && (
-        <div className="grid grid-cols-2 gap-1.5">
-          {choices.map((c, i) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {choices.map(({ c, i }) => {
             const letter = LETTERS[i];
-            const isCorrect = q.answer === letter;
+            const isCorrect = correctLetters.has(letter);
             return (
               <div key={letter} className={`flex items-start gap-2 rounded-lg px-3 py-2 border text-sm ${
                 isCorrect ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-zinc-50 border-zinc-200 text-zinc-600"
@@ -218,18 +247,18 @@ function QuestionPreviewCard({
         </div>
       )}
 
-      {/* Graphing answer */}
-      {isGraphing && (
-        <div className="text-sm text-zinc-400 italic flex items-center gap-2">
-          Graph question — correct line:
-          <span className="font-mono text-zinc-600 not-italic bg-zinc-100 px-2 py-0.5 rounded">{q.answer}</span>
+      {/* Every other type: show the stored answer as-is */}
+      {!isGridIn && choices.length === 0 && (
+        <div className="text-sm text-zinc-400 italic flex items-center gap-2 flex-wrap">
+          {isGraphing ? "Graph question, correct line:" : "Correct answer:"}
+          <span className="font-mono text-zinc-600 not-italic bg-zinc-100 px-2 py-0.5 rounded break-all">{q.answer}</span>
         </div>
       )}
     </div>
   );
 }
 
-// ── Main panel ─────────────────────────────────────────────────────────────────
+//  Main panel
 
 export default function AdminReportsPanel({ onEditQuestion, onReportResolved, isAdmin = true }: Props) {
   const [reports, setReports]             = useState<Report[]>([]);
@@ -243,6 +272,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
   // Multi-select
   const [selected, setSelected]           = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking]     = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
 
   // Per-row confirm-delete log
   const [confirmDeleteLog, setConfirmDeleteLog] = useState<string | null>(null);
@@ -258,6 +288,13 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
   const [exportFields, setExportFields] = useState<Set<string>>(new Set(DEFAULT_EXPORT_FIELDS));
   const [exporting, setExporting]     = useState(false);
 
+  // Changing a filter hides rows but used to leave them selected, so "Delete N"
+  // could act on reports that were no longer on screen.
+  useEffect(() => {
+    setSelected(new Set());
+    setConfirmBulkDelete(false);
+  }, [filterStatus, filterMonth, filterTestType, filterPacket, filterReason]);
+
   const fetchReports = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -267,7 +304,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
     if (error || !data) { setLoading(false); return; }
 
     const userIds = [...new Set(data.map((r) => r.user_id).filter(Boolean))] as string[];
-    let nameMap: Record<string, { first_name: string; last_name: string }> = {};
+    const nameMap: Record<string, { first_name: string; last_name: string }> = {};
     if (userIds.length > 0) {
       if (isAdmin) {
         const { data: profiles } = await supabase
@@ -290,7 +327,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
       last_name:  nameMap[r.user_id]?.last_name,
     })));
     setLoading(false);
-  }, []);
+  }, [isAdmin]);
 
   // Fetch question when row expands
   useEffect(() => {
@@ -312,7 +349,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
 
   useEffect(() => { fetchReports(); }, [fetchReports]);
 
-  // ── Status helpers ─────────────────────────────────────────────────────────
+  //  Status helpers
 
   const STATUS_ORDER: Record<Report["status"], number> = { pending: 0, reviewed: 1, resolved: 2 };
 
@@ -329,7 +366,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
     onReportResolved();
   }
 
-  // ── Delete a single report log ─────────────────────────────────────────────
+  //  Delete a single report log
 
   async function deleteReport(id: string) {
     await supabase.from("question_reports").delete().eq("id", id);
@@ -339,7 +376,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
     onReportResolved();
   }
 
-  // ── Delete the flagged question from the bank ──────────────────────────────
+  //  Delete the flagged question from the bank
 
   async function deleteQuestion(uid: string, reportId: string) {
     // Delete from all_questions
@@ -358,9 +395,10 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
     await setStatus(reportId, "resolved");
   }
 
-  // ── Bulk actions ───────────────────────────────────────────────────────────
+  //  Bulk actions
 
   async function bulkDeleteReports() {
+    setConfirmBulkDelete(false);
     setBulkWorking(true);
     const ids = [...selected];
     await supabase.from("question_reports").delete().in("id", ids);
@@ -389,7 +427,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
     setBulkWorking(false);
   }
 
-  // ── Derived state ──────────────────────────────────────────────────────────
+  //  Derived state
 
   // Option lists are built from the data actually present, so a filter can
   // never offer a value that would return nothing.
@@ -417,15 +455,16 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
     setFilterPacket("all"); setFilterReason("all");
   }
 
-  // ── CSV export ─────────────────────────────────────────────────────────────
+  //  CSV export
 
   async function exportCsv() {
     const cols = EXPORT_FIELDS.filter(f => exportFields.has(f.key));
-    if (cols.length === 0 || visible.length === 0) return;
+    if (cols.length === 0 || visible.length === 0 || exporting) return;
     setExporting(true);
+    try {
 
     // Question text / topic / answer live in all_questions, not in the reports
-    // table — fetch them only when one of those columns was actually selected.
+    // table, fetch them only when one of those columns was actually selected.
     const rows: ExportRow[] = visible.map(r => ({ ...r }));
     if (cols.some(c => QUESTION_FIELDS.has(c.key))) {
       const uids = [...new Set(rows.map(r => r.question_uid).filter(Boolean))] as string[];
@@ -446,9 +485,9 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
       ...rows.map(r => cols.map(c => csvEscape(c.get(r))).join(",")),
     ].join("\r\n");
 
-    // Leading BOM so Excel reads it as UTF-8 — without it, em dashes and
+    // Leading BOM so Excel reads it as UTF-8, without it, em dashes and
     // curly quotes in question text arrive mojibaked.
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
     a.href = url;
@@ -456,10 +495,15 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Revoking synchronously aborts the download in Safari and some Firefox builds.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
 
-    setExporting(false);
     setExportOpen(false);
+    } catch (err) {
+      console.error("CSV export failed:", err);
+    } finally {
+      setExporting(false);
+    }
   }
 
   const counts = {
@@ -481,10 +525,10 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
   }
 
   function toggleOne(id: string) {
-    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  //  Render
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-white">
@@ -575,7 +619,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
                     checked={exportFields.has(f.key)}
                     onChange={() => setExportFields(s => {
                       const n = new Set(s);
-                      n.has(f.key) ? n.delete(f.key) : n.add(f.key);
+                      if (n.has(f.key)) n.delete(f.key); else n.add(f.key);
                       return n;
                     })}
                     className="w-3.5 h-3.5 rounded border-zinc-300 text-blue-500 cursor-pointer"
@@ -627,12 +671,23 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
               className="px-2.5 py-1 rounded-lg text-xs sm:text-sm font-semibold bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 border border-blue-500/20 disabled:opacity-40 transition-colors whitespace-nowrap">
               Mark Reviewed
             </button>
-            {isAdmin && (
-            <button type="button" disabled={bulkWorking} onClick={bulkDeleteReports}
-              className="px-2.5 py-1 rounded-lg text-xs sm:text-sm font-semibold bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border border-rose-500/20 disabled:opacity-40 transition-colors whitespace-nowrap">
-              {bulkWorking ? "Deleting…" : `Delete ${selected.size}`}
-            </button>
-            )}
+            {isAdmin && (confirmBulkDelete ? (
+              <>
+                <button type="button" disabled={bulkWorking} onClick={bulkDeleteReports}
+                  className="px-2.5 py-1 rounded-lg text-xs sm:text-sm font-semibold bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 transition-colors whitespace-nowrap">
+                  {bulkWorking ? "Deleting…" : `Delete ${selected.size} permanently`}
+                </button>
+                <button type="button" disabled={bulkWorking} onClick={() => setConfirmBulkDelete(false)}
+                  className="px-2.5 py-1 rounded-lg text-xs sm:text-sm font-semibold text-zinc-500 hover:text-zinc-800 transition-colors whitespace-nowrap">
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button type="button" disabled={bulkWorking} onClick={() => setConfirmBulkDelete(true)}
+                className="px-2.5 py-1 rounded-lg text-xs sm:text-sm font-semibold bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border border-rose-500/20 disabled:opacity-40 transition-colors whitespace-nowrap">
+                {`Delete ${selected.size}`}
+              </button>
+            ))}
           </div>
           <button type="button" onClick={() => setSelected(new Set())}
             className="ml-auto text-xs sm:text-sm text-zinc-400 hover:text-zinc-700 shrink-0">
@@ -725,13 +780,13 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
                     {/* Test */}
                     <td className="px-4 py-3 text-zinc-600 whitespace-nowrap max-w-40 truncate cursor-pointer"
                         onClick={() => setExpanded(expanded === r.id ? null : r.id)}>
-                      {r.test_name ?? <span className="text-zinc-400">—</span>}
+                      {r.test_name ?? <span className="text-zinc-400">-</span>}
                     </td>
 
                     {/* Q# / UID */}
                     <td className="px-4 py-3 cursor-pointer"
                         onClick={() => setExpanded(expanded === r.id ? null : r.id)}>
-                      <span className="text-zinc-500 tabular-nums">{r.order_index ?? "—"}</span>
+                      <span className="text-zinc-500 tabular-nums">{r.order_index ?? "-"}</span>
                       {r.question_uid && (
                         <p className="text-xs font-mono text-zinc-400 mt-0.5 max-w-32 truncate" title={r.question_uid}>
                           {r.question_uid}
@@ -776,7 +831,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
                             Reopen
                           </button>
                         )}
-                        {/* Delete log — admin only */}
+                        {/* Delete log, admin only */}
                         {isAdmin && (confirmDeleteLog === r.id ? (
                           <div className="flex items-center gap-1 bg-rose-50 border border-rose-200 rounded px-2 py-0.5">
                             <span className="text-xs text-rose-700 font-semibold">Delete log?</span>
@@ -828,7 +883,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
                                 ) : (
                                   <span className="text-sm text-zinc-400 italic">
                                     <span className="font-mono text-zinc-500 not-italic">{r.question_uid}</span>
-                                    {" — question not found (may have been deleted)"}
+                                    {" (question not found, it may have been deleted)"}
                                   </span>
                                 )}
                               </div>

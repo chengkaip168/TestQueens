@@ -9,7 +9,7 @@ import { exportResultsPDF } from "../utils/exportResultsPDF";
 import { fetchIncorrectReport, fetchFullIncorrectReport, exportIncorrectPDF } from "../utils/exportIncorrectPDF";
 import { SUBCAT_TW, fmtSubEN } from "../utils/translations";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+//  Types
 
 interface Student {
   id: string;
@@ -86,7 +86,7 @@ interface StudentGroupData {
   }[];
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+//  Helpers
 
 const invoke = (action: string, extra?: object) =>
   supabase.functions.invoke("parent-api", { body: { action, ...extra } });
@@ -106,7 +106,7 @@ function formatDuration(min: number) {
   return h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ""}` : `${m}m`;
 }
 
-// ── Small shared components ───────────────────────────────────────────────────
+//  Small shared components
 
 function Avatar({ student, size = "md" }: { student: Student; size?: "sm" | "md" | "lg" }) {
   const sz = size === "sm" ? "w-8 h-8 text-xs" : size === "lg" ? "w-12 h-12 text-base" : "w-10 h-10 text-sm";
@@ -125,7 +125,7 @@ function ScoreBadge({ score }: { score: number | null }) {
   return <span className={`text-xs font-bold px-2.5 py-1 rounded-full tabular-nums ${color}`}>{score}%</span>;
 }
 
-// ── Language translations ─────────────────────────────────────────────────────
+//  Language translations
 
 type Lang = "en" | "zh-TW";
 
@@ -135,6 +135,7 @@ interface LangStrings {
   ela: string; math: string;
   revisingEditing: string; readingComprehension: string;
   estimatedScore: string; diffWeighted: string; bySubcategory: string;
+  notOfficial: string;
   performanceSummary: string;
   strengths: string; improvements: string; recommendations: string;
   questionReview: string;
@@ -151,8 +152,8 @@ interface LangStrings {
 const SCORE_BAND_TW: Record<string, string> = {
   "Top-school competitive range":                   "頂尖學校競爭水準",
   "Competitive range for specialized schools":      "特色學校競爭水準",
-  "Approaching competitive — keep going!":          "接近競爭水準，繼續加油！",
-  "Keep practicing — you're building real skills!": "持續練習，你正在穩步提升！",
+  "Approaching competitive: keep going!":          "接近競爭水準，繼續加油！",
+  "Keep practicing: you're building real skills!": "持續練習，你正在穩步提升！",
 };
 
 // Keys cover both underscore DB format and space/symbol display format.
@@ -165,6 +166,7 @@ const T: Record<Lang, LangStrings> = {
     ela: "English / ELA", math: "Math",
     revisingEditing: "Revising/Editing", readingComprehension: "Reading Comprehension",
     estimatedScore: "Estimated SHSAT Score", diffWeighted: "Difficulty-weighted", bySubcategory: "By subcategory",
+    notOfficial: "Our own estimate, not an official SHSAT score.",
     performanceSummary: "Performance Summary",
     strengths: "Strengths", improvements: "Areas to Improve", recommendations: "Study Recommendations",
     questionReview: "Question Review",
@@ -195,6 +197,7 @@ const T: Record<Lang, LangStrings> = {
     ela: "英語 / 語文", math: "數學",
     revisingEditing: "修訂與編輯", readingComprehension: "閱讀理解",
     estimatedScore: "SHSAT 預估分數", diffWeighted: "難度加權", bySubcategory: "按子類別查看",
+    notOfficial: "這是本站自行推算的分數，並非官方 SHSAT 成績。",
     performanceSummary: "學習表現摘要",
     strengths: "優勢", improvements: "待提升方向", recommendations: "學習建議",
     questionReview: "題目回顧",
@@ -221,7 +224,7 @@ const T: Record<Lang, LangStrings> = {
   },
 };
 
-// ── Results Modal ─────────────────────────────────────────────────────────────
+//  Results Modal
 
 function ResultsModal({
   testID, studentID, studentName, duration,
@@ -446,6 +449,7 @@ function ResultsModal({
                   </span>
                   <span className="text-xl font-bold text-slate-300 mb-1">/700</span>
                 </div>
+                <p className="text-xs text-slate-400 text-center -mt-1">{t.notOfficial}</p>
                 <div className="flex justify-center gap-3">
                   <div className="flex flex-col items-center gap-0.5">
                     <span className="text-xs text-slate-400">{t.revisingEditing}</span>
@@ -493,7 +497,6 @@ function ResultsModal({
                             <div className="flex flex-col gap-2">
                               {group.list.map(sub => {
                                 const sc = sub.score;
-                                const color = sc >= 580 ? "text-emerald-600" : sc >= 450 ? "text-amber-500" : "text-rose-500";
                                 return (
                                   <div key={sub.name} className="flex flex-col gap-1">
                                     <div className="flex items-center justify-between text-xs">
@@ -636,7 +639,7 @@ function ResultsModal({
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+//  Main Page
 
 function ParentPage() {
   const user     = useContext(UserContext);
@@ -703,7 +706,7 @@ function ParentPage() {
   const [removeLoading, setRemoveLoading]  = useState(false);
   const [removeError,   setRemoveError]    = useState("");
 
-  // ── Data loading ─────────────────────────────────────────────────────────
+  //  Data loading
 
   useEffect(() => {
     if (!user) return;
@@ -744,7 +747,7 @@ function ParentPage() {
     setLoadingGroups(false);
   }
 
-  // ── Add child ────────────────────────────────────────────────────────────
+  //  Add child
 
   async function handleAddChild() {
     if (!addEmail.trim()) { setAddError("Please enter a student email address."); return; }
@@ -763,7 +766,7 @@ function ParentPage() {
     selectStudent(newStudent);
   }
 
-  // ── Remove child ─────────────────────────────────────────────────────────
+  //  Remove child
 
   async function handleRemoveChild() {
     if (!removeTarget) return;
@@ -789,14 +792,14 @@ function ParentPage() {
     navigate("/");
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  //  Render
 
   const completedTests = tests.filter(t => t.score !== null);
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
 
-      {/* ── Header ── */}
+      {/*  Header  */}
       <div className="bg-white border-b border-slate-100 shadow-sm px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <LogoLockup className="h-7 w-auto shrink-0" />
@@ -818,10 +821,10 @@ function ParentPage() {
         </div>
       </div>
 
-      {/* ── Body ── */}
+      {/*  Body  */}
       <div className="flex flex-col sm:flex-row flex-1 overflow-hidden">
 
-        {/* ── Sidebar: children list ── */}
+        {/*  Sidebar: children list  */}
         <div className="w-full sm:w-56 lg:w-72 shrink-0 bg-white border-b sm:border-b-0 sm:border-r border-slate-200 flex flex-col overflow-hidden max-h-52 sm:max-h-none">
           <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
             <h2 className="text-sm font-bold text-slate-700">My Children</h2>
@@ -857,7 +860,7 @@ function ParentPage() {
                     <p className="text-xs text-slate-400">Student</p>
                   </div>
                 </button>
-                {/* Remove button — only visible on hover and only if >1 student */}
+                {/* Remove button, only visible on hover and only if >1 student */}
                 {students.length > 1 && (
                   <button
                     type="button"
@@ -889,7 +892,7 @@ function ParentPage() {
           </div>
         </div>
 
-        {/* ── Main content ── */}
+        {/*  Main content  */}
         <div className="flex-1 overflow-y-auto">
           {!selectedStudent ? (
             <div className="flex h-full items-center justify-center">
@@ -1213,7 +1216,7 @@ function ParentPage() {
         </div>
       </div>
 
-      {/* ── Add Child Modal ── */}
+      {/*  Add Child Modal  */}
       {addModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col">
@@ -1271,7 +1274,7 @@ function ParentPage() {
         </div>
       )}
 
-      {/* ── Remove Confirm Modal ── */}
+      {/*  Remove Confirm Modal  */}
       {removeTarget && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col">
@@ -1312,7 +1315,7 @@ function ParentPage() {
         </div>
       )}
 
-      {/* ── Results Modal ── */}
+      {/*  Results Modal  */}
       {viewResult && (
         <ResultsModal
           testID={viewResult.testID}

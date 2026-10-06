@@ -4,10 +4,11 @@ import { computeSHSATScore, scoreLabel, isRevisingEditing, type SHSATScore, type
 import { useContext } from "react";
 import { UserContext } from "./userContext";
 import QuestionDetailModal from "./QuestionDetailModal";
+import { useModalBehavior } from "../hooks/useModalBehavior";
 import { exportResultsPDF } from "../utils/exportResultsPDF";
 import { SUBCAT_TW, SCORE_BAND_TW, fmtSubEN, type Lang } from "../utils/translations";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+//  Types
 
 interface QuestionResult { id: string; order_index: number; is_correct: boolean | null; student_answer: string | null; sub_category: string | null; subject: string | null; time_spent?: number | null; }
 interface SelectedQuestion { uid: string; studentAnswer: string | null; isCorrect: boolean | null; questionNumber: number; }
@@ -18,13 +19,14 @@ interface TestInfo {
   duration?: number;
 }
 
-// ── Language ──────────────────────────────────────────────────────────────────
+//  Language
 
 interface LangStrings {
   saveAsPDF: string; pdfGenerating: string;
   rawScore: string; correct: (n: number, m: number) => string;
   math: string; revisingEditing: string; readingComprehension: string;
   estimatedScore: string; diffWeighted: string; bySubcategory: string;
+  notOfficial: string;
   performanceSummary: string;
   strengths: string; improvements: string; recommendations: string;
   questionReview: string;
@@ -45,6 +47,7 @@ const T: Record<Lang, LangStrings> = {
     rawScore: "score", correct: (n, m) => `${n} / ${m} correct`,
     math: "Math", revisingEditing: "Revising/Editing", readingComprehension: "Reading Comprehension",
     estimatedScore: "Estimated SHSAT Score", diffWeighted: "Difficulty-weighted", bySubcategory: "By subcategory",
+    notOfficial: "Our own estimate, not an official SHSAT score.",
     performanceSummary: "Performance Summary",
     strengths: "Strengths", improvements: "Areas to Improve", recommendations: "What to Do Next",
     questionReview: "Question Review",
@@ -74,6 +77,7 @@ const T: Record<Lang, LangStrings> = {
     rawScore: "原始分數", correct: (n, m) => `${n} / ${m} 題答對`,
     math: "數學", revisingEditing: "修訂與編輯", readingComprehension: "閱讀理解",
     estimatedScore: "SHSAT 預估分數", diffWeighted: "難度加權", bySubcategory: "按子類別查看",
+    notOfficial: "這是本站自行推算的分數，並非官方 SHSAT 成績。",
     performanceSummary: "學習表現摘要",
     strengths: "優勢", improvements: "待提升方向", recommendations: "學習建議",
     questionReview: "題目回顧",
@@ -100,7 +104,7 @@ const T: Record<Lang, LangStrings> = {
   },
 };
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+//  Sub-components
 
 function ScoreCircle({ correct, total, t }: { correct: number; total: number; t: LangStrings }) {
   const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
@@ -142,13 +146,13 @@ function getSubTip(name: string): string {
   const MAP: Record<string, string> = {
     Vocabulary_in_Context: "Cover the word, predict what fits, then match to the answer choices.",
     Textual_Evidence: "Re-read the exact lines cited in the question before answering.",
-    Central_Idea: "Summarize the whole passage in one sentence — that is the central idea.",
+    Central_Idea: "Summarize the whole passage in one sentence, that is the central idea.",
     Algebra_and_Equations: "Translate each word problem into one equation, then solve step-by-step.",
     Geometry: "Sketch the figure and label all known values before computing.",
     Arithmetic: "Review PEMDAS and practice quick fraction↔decimal conversions.",
     Percentage: "Part = Percent × Whole; percent change = (new − old) ÷ old × 100.",
     Comma_Usage: "Commas join independent clauses with a conjunction, follow introductory phrases, and separate list items.",
-    Pronoun_Agreement: "Match each pronoun to its antecedent in number — 'everyone/each' is singular.",
+    Pronoun_Agreement: "Match each pronoun to its antecedent in number, 'everyone/each' is singular.",
     Sentence_Structure: "Identify subject + verb in each clause; fragments lack one, run-ons lack a separator.",
   };
   const key = name.replace(/[-\s]/g, "_");
@@ -175,12 +179,6 @@ function SHSATScoreCard({ score, t }: { score: SHSATScore; t: LangStrings }) {
   const readingSubcats  = score.subcategories.filter(s => s.subject === "english" && !isRevisingEditing(s.name));
   const mathSubcats     = score.subcategories.filter(s => s.subject === "math");
 
-  function subScoreColor(s: number) {
-    if (s >= 580) return "text-emerald-400";
-    if (s >= 450) return "text-amber-400";
-    return "text-rose-400";
-  }
-
   function subBarPct(s: number) {
     return `${Math.round(((s - 200) / 500) * 100)}%`;
   }
@@ -198,6 +196,7 @@ function SHSATScoreCard({ score, t }: { score: SHSATScore; t: LangStrings }) {
         <span className={`text-5xl font-black tabular-nums ${totalColorClass}`}>{score.total}</span>
         <span className="text-xl font-bold text-zinc-700 mb-1">/700</span>
       </div>
+      <p className="text-xs text-zinc-500 text-center -mt-2">{t.notOfficial}</p>
 
       <div className="flex items-center justify-center gap-3">
         <div className="flex flex-col items-center gap-0.5">
@@ -274,7 +273,7 @@ const ANALYSIS_COLORS = {
   recommendations: { card: "bg-blue-500/5 border-blue-500/20",     title: "text-blue-400",    bullet: "text-blue-500",    text: "text-blue-100"    },
 } as const;
 
-// ── Main component ────────────────────────────────────────────────────────────
+//  Main component
 
 interface ResultsModalProps {
   testID: string;
@@ -295,7 +294,11 @@ export default function ResultsModal({ testID, userID, studentName, onClose }: R
 
   const t = T[lang];
 
+  // Only own Escape and the page scroll while the nested detail modal is closed.
+  useModalBehavior(onClose, selectedQ === null);
+
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       setLoading(true);
 
@@ -311,12 +314,13 @@ export default function ResultsModal({ testID, userID, studentName, onClose }: R
           body: { student_id: userID },
         });
         if (res) {
-          type EdgeQ = { id: string; test_id: string; order_index: number; is_correct: boolean | null; student_answer?: string | null; difficulty: string | null; sub_category: string | null; subject: string | null };
+          type EdgeQ = { id: string; test_id: string; order_index: number; is_correct: boolean | null; student_answer?: string | null; time_spent?: number | null; difficulty: string | null; sub_category: string | null; subject: string | null };
           type EdgeTest = TestInfo & { id: string };
           const allQs = (res.questions ?? []) as EdgeQ[];
           const allTests = (res.tests ?? []) as EdgeTest[];
           resolvedQs = allQs.filter(q => q.test_id === testID).map(q => ({
             id: q.id, order_index: q.order_index, is_correct: q.is_correct, student_answer: q.student_answer ?? null,
+            time_spent: q.time_spent ?? null,
             sub_category: q.sub_category ?? null, subject: q.subject ?? null,
           }));
           resolvedTest = allTests.find(t => t.id === testID) ?? null;
@@ -335,7 +339,7 @@ export default function ResultsModal({ testID, userID, studentName, onClose }: R
           supabase.from("questions").select("id, order_index, is_correct, student_answer, time_spent").eq("test_id", testID).eq("user_id", userID).order("order_index"),
         ]);
         resolvedTest = testData as TestInfo | null;
-        resolvedQs = (qData as QuestionResult[]).map(q => ({ ...q, sub_category: null })) ?? [];
+        resolvedQs = ((qData as QuestionResult[] | null) ?? []).map(q => ({ ...q, sub_category: null }));
 
         if (resolvedQs.length > 0) {
           const questionIds = resolvedQs.map(q => q.id).filter(Boolean);
@@ -377,14 +381,23 @@ export default function ResultsModal({ testID, userID, studentName, onClose }: R
         shsat = computeSHSATScore(scored, englishCnt);
       }
 
-      // Batch all state updates — React 18 auto-batches these in async context,
+      // Batch all state updates, React 18 auto-batches these in async context,
       // so the UI renders once with everything ready.
+      if (cancelled) return;
       if (resolvedTest) setTest(resolvedTest);
       setQuestions(resolvedQs);
       if (shsat) setShsatScore(shsat);
       setLoading(false);
-    })();
-  }, [testID, userID]);
+    })().catch(err => {
+      // Leaving loading true here would spin forever; falling through with a null
+      // test renders the "unable to load" branch instead.
+      console.error("Failed to load results:", err);
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+    // currentUser?.id decides between the direct query and the edge function, so the
+    // effect has to re-run if the session resolves after mount.
+  }, [testID, userID, currentUser?.id]);
 
   // Use subject field as the primary ELA/Math split; fall back to configuration
   // only when subject data is absent (older test records may lack it).
@@ -431,26 +444,26 @@ export default function ResultsModal({ testID, userID, studentName, onClose }: R
 
   if (strongSubs.length > 0) {
     const best = strongSubs[0];
-    strengths.push(`${fmtSubEN(best.name)} is a strength — ${Math.round((best.earned / best.max) * 100)}% on ${best.total} questions`);
+    strengths.push(`${fmtSubEN(best.name)} is a strength, ${Math.round((best.earned / best.max) * 100)}% on ${best.total} questions`);
   } else {
     strengths.push(engGood ? "Strong English performance overall" : mathGood ? "Solid math fundamentals" : "Consistent effort across all sections");
   }
   if (pacingGood && avgRound != null) {
-    strengths.push(`Good pacing — ${avgRound}s per question, within the ${budgetRound}s budget`);
+    strengths.push(`Good pacing: ${avgRound}s per question, within the ${budgetRound}s budget`);
   } else {
     strengths.push(`Completed ${questions.length} of ${totalQ} questions`);
   }
 
   if (weakSubs.length > 0) {
     const w = weakSubs[0];
-    improvements.push(`${fmtSubEN(w.name)} is the biggest gap — ${Math.round((w.earned / w.max) * 100)}% on ${w.total} questions`);
+    improvements.push(`${fmtSubEN(w.name)} is the biggest gap, ${Math.round((w.earned / w.max) * 100)}% on ${w.total} questions`);
   } else {
     improvements.push(engGood ? "Push for higher Reading Comprehension accuracy" : "Focus on Revising/Editing and Reading Comprehension");
   }
   if (pacingCritical) {
-    improvements.push(`Pacing is critical — ${avgRound}s/question vs ${budgetRound}s budget; risks running out of time on the actual SHSAT`);
+    improvements.push(`Pacing is critical, ${avgRound}s/question vs ${budgetRound}s budget; risks running out of time on the actual SHSAT`);
   } else if (pacingWarning) {
-    improvements.push(`Slightly over pace — ${avgRound}s/question; timed drills can help`);
+    improvements.push(`Slightly over pace, ${avgRound}s/question; timed drills can help`);
   } else {
     improvements.push(mathGood ? "Target harder math problem types" : "Review core math concepts");
   }
@@ -462,11 +475,11 @@ export default function ResultsModal({ testID, userID, studentName, onClose }: R
     recommendations.push("Practice with timed sessions to maintain accuracy under time pressure");
   }
   if (pacingCritical || pacingWarning) {
-    recommendations.push(`Set a ${budgetRound}s-per-question timer and complete 20 questions without going back — the fastest way to build test pace`);
+    recommendations.push(`Set a ${budgetRound}s-per-question timer and complete 20 questions without going back, the fastest way to build test pace`);
   } else {
-    recommendations.push("Re-read each incorrect explanation within 24 hours — same-day review doubles long-term retention");
+    recommendations.push("Re-read each incorrect explanation within 24 hours, same-day review doubles long-term retention");
   }
-  recommendations.push("Spend extra study time on the lower-scoring section — targeted practice yields faster gains than mixed review");
+  recommendations.push("Spend extra study time on the lower-scoring section, targeted practice yields faster gains than mixed review");
 
   const analysis: AIAnalysis = { strengths, improvements, recommendations };
 
@@ -503,11 +516,16 @@ export default function ResultsModal({ testID, userID, studentName, onClose }: R
         isCorrect: q.is_correct,
         isEnglish: q.subject === "english",
       })),
+    }).catch(err => {
+      console.error("PDF export failed:", err);
     }).finally(() => setPdfLoading(false));
   }
 
   return (
-    <div className="fixed inset-0 bg-black/85 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6">
+    <div
+      className="fixed inset-0 bg-black/85 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6"
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-2xl my-auto flex flex-col">
 
         {/* Header */}
@@ -599,7 +617,7 @@ export default function ResultsModal({ testID, userID, studentName, onClose }: R
               </div>
             </div>
 
-            {/* SHSAT Score Estimate — not shown for practice sessions */}
+            {/* SHSAT Score Estimate, not shown for practice sessions */}
             {shsatScore && test?.test_name !== "Practice" && <SHSATScoreCard score={shsatScore} t={t} />}
 
             {/* Performance Summary */}

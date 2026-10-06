@@ -14,6 +14,7 @@ import ELAToolbar from "../components/ELAToolbar.tsx";
 import ELAPencilCanvas from "../components/ELAPencilCanvas.tsx";
 import ELANotepad from "../components/ELANotepad.tsx";
 import ELALineMask from "../components/ELALineMask.tsx";
+import { useModalBehavior } from "../hooks/useModalBehavior";
 
 // Extracts the leading letter (A–H) from a choice string like "A) text", "E. text", or just "A".
 function choiceLetterOf(s: string): string {
@@ -77,8 +78,15 @@ function checkAnswer(student: string, correct: string, type: string): boolean {
     } catch { return false; }
   }
 
-  if (type === "mcq" || type === "inline-dropdown") {
+  if (type === "mcq" || type === "inline-dropdown" || type === "inline_text_span_click") {
     return choiceLetterOf(student) === choiceLetterOf(correct);
+  }
+
+  if (type === "in_passage_sentence_select") {
+    // Both sides are 1-based sentence indexes; compare numerically so "03" matches "3".
+    const sIdx = parseInt(student.trim(), 10);
+    const cIdx = parseInt(correct.trim(), 10);
+    return Number.isInteger(sIdx) && Number.isInteger(cIdx) && sIdx === cIdx;
   }
 
   if (type === "number_line_click") {
@@ -97,7 +105,7 @@ function checkAnswer(student: string, correct: string, type: string): boolean {
     return student.trim().toUpperCase() === correct.trim().toUpperCase();
   }
 
-  // ── Grid-in ───────────────────────────────────────────────────────────────────
+  //  Grid-in
   // Accepts: "42", " 42 ", "3/4", "3 / 4", "0.75", ".75", "1,000",
   //          mixed number "1 1/2", negative "-3/4", space-grouped "1 024"
   const toNum = (raw: string): number | null => {
@@ -115,7 +123,7 @@ function checkAnswer(student: string, correct: string, type: string): boolean {
           return whole + (whole < 0 ? -1 : 1) * (num / den);
         }
       }
-      // Simple fraction: "3/4" or "3 / 4" — Number() tolerates surrounding spaces
+      // Simple fraction: "3/4" or "3 / 4", Number() tolerates surrounding spaces
       const parts = t.split("/");
       if (parts.length === 2) {
         const n = Number(parts[0]);
@@ -149,7 +157,7 @@ function formatTime(seconds: number): string {
 }
 
 // Returns true if the media_id covers multiple questions (e.g. "25A_Q1-Q8_A").
-// Single-question media looks like "25A_Q25_A" — no hyphen in the question segment.
+// Single-question media looks like "25A_Q25_A", no hyphen in the question segment.
 function isMultiQuestionMedia(mediaId: string): boolean {
   const parts = mediaId.split("_");
   return parts.length >= 2 && parts[1].includes("-");
@@ -265,6 +273,7 @@ function MockTest() {
   const [reportDone, setReportDone] = useState(false);
   const [reportError, setReportError] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reportCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasInitialized = useRef(false);
   const currentSubjectRef = useRef<string>("");
   const questionStartTimeRef = useRef<number>(Date.now());
@@ -302,7 +311,7 @@ function MockTest() {
   // Practice queue: pre-built at test start (avoids 2-step UID-then-fetch per question)
   const practiceQueueRef    = useRef<string[]>([]);
   const practiceQueuePosRef = useRef<number>(0);
-  // Resolved practice topics — set once in initPracticeQueue, read by getQuestion and adaptive inits
+  // Resolved practice topics, set once in initPracticeQueue, read by getQuestion and adaptive inits
   const practiceTopicsRef   = useRef<string[]>([]);
 
   // Pre-fetch cache: stores the next question AND its media so both can be applied instantly
@@ -328,13 +337,21 @@ function MockTest() {
   // Executed automatically by the DB-recovery ping when the server comes back.
   const pendingQuestionRetryRef         = useRef<(() => Promise<void>) | null>(null);
 
+  const handleAnswerChange = useCallback((value: string) => {
+    setChosenAnswer(value);
+    if (value) setNullSubmission(false);
+  }, []);
+
+  const closeReportModal = useCallback(() => setShowReportModal(false), []);
+  useModalBehavior(closeReportModal, showReportModal);
+
   const navigate = useNavigate();
   const user = useContext(UserContext);
   const { testID } = useParams();
 
-  // Derived values — recalculated every render, no extra state needed
+  // Derived values, recalculated every render, no extra state needed
   const isReadOnly = currentQuestion < latestQuestion;
-  // True when reviewing within the current active set — answers are editable (not locked)
+  // True when reviewing within the current active set, answers are editable (not locked)
   const isEditableReview = isReadOnly && currentQuestion >= currentSetStartRef.current;
 
   // Build choice images and the set of media_ids consumed as choices,
@@ -378,7 +395,7 @@ function MockTest() {
   const isPassageQuestion = mediaItems.some((m) => isMultiQuestionMedia(m.media_id));
   const showBackButton = currentQuestion > currentSetStartRef.current && (isPassageQuestion || isReadOnly);
 
-  // ─── Adaptive English initialisation ────────────────────────────────────────
+  //  Adaptive English initialisation
 
   // Picks the next RC passage based on blended historical + current-test θ.
   // Called at test start (first passage) and automatically after each passage
@@ -512,7 +529,6 @@ function MockTest() {
   const initMathAdaptive = async (test: Test) => {
     if (!user || test.test_name === "Diagnostic Test") return;
     if (practiceTopicsRef.current.length > 0) return;
-    const config = test.configuration as Record<string, unknown> | null;
 
     // Fetch pool and historical θ in parallel
     const [{ data: pool }, { data: thetaRaw }] = await Promise.all([
@@ -551,9 +567,9 @@ function MockTest() {
     selectNextMathGroup();
   };
 
-  // ─── Pre-fetch helpers ───────────────────────────────────────────────────────
+  //  Pre-fetch helpers
 
-  // Start a background fetch of the given UID — fetches question data AND media in parallel
+  // Start a background fetch of the given UID, fetches question data AND media in parallel
   // so both can be applied synchronously (no async delay) when the student submits.
   function triggerPrefetch(uid: string) {
     if (prefetchingRef.current || prefetchedRef.current?.uid === uid || answeredIdsRef.current.has(uid)) return;
@@ -585,7 +601,7 @@ function MockTest() {
   }
 
   // Fetch a question by UID, using the pre-fetch cache when available.
-  // On a cache hit, question data AND media are both applied synchronously —
+  // On a cache hit, question data AND media are both applied synchronously -
   // no async delay, no risk of stale media from the previous question bleeding through.
   const fetchByUID = async (
     uid: string,
@@ -618,7 +634,7 @@ function MockTest() {
     return data as unknown as Record<string, string>;
   };
 
-  // ─── Practice queue initialisation ───────────────────────────────────────────
+  //  Practice queue initialisation
 
   // Pre-builds a shuffled UID queue at test start so practice mode only needs
   // one DB call per question instead of the 2-step UID-pool → full-fetch approach.
@@ -682,7 +698,7 @@ function MockTest() {
     practiceQueuePosRef.current = 0;
   };
 
-  // ─── Network resilience helpers ─────────────────────────────────────────────
+  //  Network resilience helpers
 
   // Retries all queued saves that failed while offline or during a transient DB error.
   // Stable (useCallback with []) so it can be used safely in event listeners and effects.
@@ -707,7 +723,7 @@ function MockTest() {
     pendingSavesRef.current = failed;
     setPendingCount(failed.length);
     if (failed.length === 0) {
-      // All saves confirmed — DB is reachable again
+      // All saves confirmed, DB is reachable again
       isDbReachableRef.current = true;
       setIsDbReachable(true);
       setSaveError(null);
@@ -737,7 +753,7 @@ function MockTest() {
           } else {
             stillFailed.push(save);
           }
-        } catch { /* malformed draft — ignore */ }
+        } catch { /* malformed draft: ignore */ }
       })
     );
     if (stillFailed.length > 0) {
@@ -746,7 +762,7 @@ function MockTest() {
     }
   };
 
-  // ─── Data fetching ──────────────────────────────────────────────────────────
+  //  Data fetching
 
   const getQuestion = async (test: Test | null, questionIndex: number): Promise<Record<string, string> | null> => {
     if (!test) return null;
@@ -763,7 +779,7 @@ function MockTest() {
       // Get already-answered UIDs for this test session to avoid repeats
       const answeredIds = answeredIdsRef.current;
 
-      // Fetch pool of available UIDs — only approved questions, filtered by subject or topics
+      // Fetch pool of available UIDs, only approved questions, filtered by subject or topics
       const config = test.configuration as unknown as Record<string, unknown> | null;
       const topics: string[] = practiceTopicsRef.current.length > 0
         ? practiceTopicsRef.current
@@ -775,7 +791,7 @@ function MockTest() {
       const isPractice = topics.length > 0;
       const isEnglishSlot = !isPractice && questionIndex <= englishCount;
 
-      // ── Adaptive English ─────────────────────────────────────────────────────
+      //  Adaptive English
       // Passages served atomically; difficulty re-evaluated at every passage boundary.
       if (isEnglishSlot && rcTargetRef.current > 0) {
         while (currentPassagePosRef.current < currentPassageUidsRef.current.length &&
@@ -801,7 +817,7 @@ function MockTest() {
           if (q) return q;
 
         } else if (rcServedRef.current < rcTargetRef.current) {
-          // Passage boundary — select next passage (θ re-evaluated here)
+          // Passage boundary, select next passage (θ re-evaluated here)
           selectNextRCPassage(); // also increments passageSetNumRef.current
           if (currentPassagePosRef.current < currentPassageUidsRef.current.length) {
             const uid  = currentPassageUidsRef.current[currentPassagePosRef.current++];
@@ -818,7 +834,7 @@ function MockTest() {
           }
 
         } else {
-          // RC quota met — serve grammar
+          // RC quota met, serve grammar
           while (grammarPosRef.current < grammarQueueRef.current.length &&
                  (answeredIds.has(grammarQueueRef.current[grammarPosRef.current]) ||
                   masteredIdsRef.current.has(grammarQueueRef.current[grammarPosRef.current]))) {
@@ -835,7 +851,7 @@ function MockTest() {
         // Fall through to random if all queues exhausted
       }
 
-      // ── Adaptive math ─────────────────────────────────────────────────────────
+      //  Adaptive math
       // Groups served atomically; difficulty re-evaluated at every group boundary.
       const isMathSlot = !isPractice && !isEnglishSlot;
       if (isMathSlot && mathGroupsRef.current.length > 0) {
@@ -855,7 +871,7 @@ function MockTest() {
           const q = await fetchByUID(uid, next, "math");
           if (q) return q;
         } else {
-          // Group boundary — select next group (θ re-evaluated here)
+          // Group boundary, select next group (θ re-evaluated here)
           selectNextMathGroup();
           if (currentMathGroupPosRef.current < currentMathGroupUidsRef.current.length) {
             const uid  = currentMathGroupUidsRef.current[currentMathGroupPosRef.current++];
@@ -868,7 +884,7 @@ function MockTest() {
         // Fall through to random if pool exhausted
       }
 
-      // ── Practice queue ────────────────────────────────────────────────────────
+      //  Practice queue
       // Pre-built at test start; avoids the 2-step random UID fetch for practice mode.
       if (topics.length > 0 && practiceQueueRef.current.length > 0) {
         while (practiceQueuePosRef.current < practiceQueueRef.current.length &&
@@ -887,7 +903,7 @@ function MockTest() {
       }
 
       // Random fallback: always enforce subject for mock/diagnostic tests regardless of
-      // whether topics are set — topics narrow the sub_category pool but must never
+      // whether topics are set, topics narrow the sub_category pool but must never
       // override the section's subject boundary.
       const expectedSubject = isEnglishSlot ? "english" : "math";
       let uidQuery = supabase.from("all_questions").select("uid").eq("status", "approved");
@@ -920,7 +936,7 @@ function MockTest() {
       if (error || !qData) { console.error("Question fetch error:", error); return null; }
 
       // Hard subject guard: final check to never serve a wrong-subject question even if
-      // DB has incorrect subject values — applies on all non-practice paths.
+      // DB has incorrect subject values, applies on all non-practice paths.
       const returnedSubject = ((qData as Record<string, string>).subject ?? "").toLowerCase();
       if (!isPractice && returnedSubject !== expectedSubject) {
         console.warn(`Subject mismatch: expected ${expectedSubject}, got ${returnedSubject} for uid ${(qData as Record<string, string>).uid}`);
@@ -1010,7 +1026,7 @@ function MockTest() {
     }
   };
 
-  // ─── Action handlers ────────────────────────────────────────────────────────
+  //  Action handlers
 
   const markTestComplete = async () => {
     if (!user || !currentTest) return;
@@ -1023,9 +1039,9 @@ function MockTest() {
     const pct = currentTest.total_questions > 0
       ? Math.round((correct / currentTest.total_questions) * 100)
       : 0;
-    // Score update is the critical operation — always awaited.
+    // Score update is the critical operation, always awaited.
     await supabase.from("tests").update({ score: pct }).eq("id", testID).is("score", null);
-    // Clear elapsed timer — fire-and-forget so a missing column never blocks the score write.
+    // Clear elapsed timer, fire-and-forget so a missing column never blocks the score write.
     supabase.from("tests").update({ time_elapsed: null }).eq("id", testID);
     // Mark any linked assignment as completed
     await supabase.from("assignments").update({ status: "completed" }).eq("test_id", testID).eq("status", "pending");
@@ -1043,7 +1059,7 @@ function MockTest() {
     );
     const time_spent = Math.round((Date.now() - questionStartTimeRef.current) / 1000);
 
-    // ── Synchronous bookkeeping BEFORE any await ───────────────────────────────
+    //  Synchronous bookkeeping BEFORE any await
     // answeredIdsRef and adaptive counters must be updated before getQuestion runs
     // so the queue skip logic and passage/group selection see the latest state.
     answeredIdsRef.current.add(questionData.uid);
@@ -1057,11 +1073,11 @@ function MockTest() {
       if (is_correct) mathCorrectRef.current++;
     }
 
-    // Clear answer immediately — gives instant visual feedback on click
+    // Clear answer immediately, gives instant visual feedback on click
     setChosenAnswer("");
     setNullSubmission(false);
 
-    // ── Last question: save then complete (must be sequential) ─────────────────
+    //  Last question: save then complete (must be sequential)
     if (currentTest && Number(currentTest.total_questions) === Number(currentQuestion)) {
       const lastDraftPayload: PendingSave = { id: questionData.uid, test_id: testID!, user_id: user.id, student_answer: chosenAnswer, is_correct, time_spent, order_index: currentQuestion };
       const lastDraftKey = `draft_${testID}_q${currentQuestion}`;
@@ -1072,7 +1088,7 @@ function MockTest() {
         { onConflict: "test_id, user_id, id" }
       );
       if (lastError) {
-        // Last answer failed — queue it so the periodic retry can save it, then block.
+        // Last answer failed, queue it so the periodic retry can save it, then block.
         pendingSavesRef.current.push(lastDraftPayload);
         setPendingCount(pendingSavesRef.current.length);
         setSaveError("Your last answer couldn't be saved. Please check your connection and tap Finish again.");
@@ -1082,11 +1098,11 @@ function MockTest() {
       localStorage.removeItem(lastDraftKey);
 
       // Flush every answer that was queued earlier before calculating score.
-      // If anything is still unsaved, block navigation — completing with missing answers
+      // If anything is still unsaved, block navigation, completing with missing answers
       // would produce a wrong score and the student would have no way to know.
       await flushPendingSaves();
       if (pendingSavesRef.current.length > 0) {
-        setSaveError(`${pendingSavesRef.current.length} answer${pendingSavesRef.current.length > 1 ? "s" : ""} couldn't be saved yet. Your progress is safe — tap Finish again once the connection restores.`);
+        setSaveError(`${pendingSavesRef.current.length} answer${pendingSavesRef.current.length > 1 ? "s" : ""} couldn't be saved yet. Your progress is safe, tap Finish again once the connection restores.`);
         setSubmitting(false);
         return;
       }
@@ -1100,14 +1116,14 @@ function MockTest() {
 
     const nextIndex = currentQuestion + 1;
 
-    // ── Save draft to localStorage before attempting DB write ─────────────────
+    //  Save draft to localStorage before attempting DB write
     // This is a safety net: if the page is closed while offline before the in-memory
     // queue can be flushed, flushLocalStorageDrafts() replays these on next load.
     const draftKey = `draft_${testID}_q${currentQuestion}`;
     const draftPayload: PendingSave = { id: questionData.uid, test_id: testID!, user_id: user.id, student_answer: chosenAnswer, is_correct, time_spent, order_index: currentQuestion };
     localStorage.setItem(draftKey, JSON.stringify(draftPayload));
 
-    // ── Save + fetch in parallel — main perf improvement ──────────────────────
+    //  Save + fetch in parallel, main perf improvement
     // The DB write and the next question fetch are independent; running them
     // together cuts perceived latency roughly in half.
     const [upsertResult, nextQuestion] = await Promise.all([
@@ -1127,7 +1143,7 @@ function MockTest() {
       localStorage.removeItem(draftKey);
     }
 
-    // ── Diagnostic: scan forward if a question slot is missing ────────────────
+    //  Diagnostic: scan forward if a question slot is missing
     let finalQuestion: Record<string, string> | null = nextQuestion;
     let finalIndex = nextIndex;
     if (!finalQuestion && currentTest.test_name === "Diagnostic Test" && nextIndex < Number(currentTest.total_questions)) {
@@ -1142,7 +1158,7 @@ function MockTest() {
     if (!finalQuestion) {
       // If the upsert also failed in this batch, or answers are queued from earlier
       // questions, the null return from getQuestion is almost certainly a DB connectivity
-      // failure — NOT a genuine end of the test.  Navigating to results with incomplete
+      // failure, NOT a genuine end of the test.  Navigating to results with incomplete
       // data would produce a wrong score and a confusing experience.
       if (upsertResult.error || pendingSavesRef.current.length > 0) {
         const capturedTest = currentTest;
@@ -1157,11 +1173,11 @@ function MockTest() {
             setSubmitting(false);
           }
         };
-        setSaveError("Server connection lost — test paused. Your progress is safe. Reconnecting…");
+        setSaveError("Server connection lost: test paused. Your progress is safe. Reconnecting…");
         setSubmitting(false);
         return;
       }
-      // DB is healthy and there genuinely are no more questions — complete the test.
+      // DB is healthy and there genuinely are no more questions, complete the test.
       localStorage.removeItem(`timerRemaining_${testID}`);
       await markTestComplete();
       navigate(`/results/${testID}`);
@@ -1220,7 +1236,7 @@ function MockTest() {
     }
   };
 
-  // Clicking the left arrow — only reachable within the current active set.
+  // Clicking the left arrow, only reachable within the current active set.
   const handleBack = async () => {
     if (currentQuestion <= currentSetStartRef.current) return;
     // If editing a within-set reviewed question, save the (possibly changed) answer
@@ -1238,7 +1254,7 @@ function MockTest() {
     await loadQuestionAtIndex(currentQuestion - 1);
   };
 
-  // ─── Report ──────────────────────────────────────────────────────────────────
+  //  Report
 
   async function submitReport() {
     if (!user || !currentTest || !questionData) return;
@@ -1261,7 +1277,7 @@ function MockTest() {
     }
     setReportError(false);
     setReportDone(true);
-    setTimeout(() => {
+    reportCloseTimer.current = setTimeout(() => {
       setShowReportModal(false);
       setReportDone(false);
       setReportDesc("");
@@ -1269,7 +1285,9 @@ function MockTest() {
     }, 1800);
   }
 
-  // ─── Effects ─────────────────────────────────────────────────────────────────
+  //  Effects
+
+  useEffect(() => () => { if (reportCloseTimer.current) clearTimeout(reportCloseTimer.current); }, []);
 
   // Initialize once when the user context is ready
   useEffect(() => {
@@ -1278,7 +1296,7 @@ function MockTest() {
 
     const init = async () => {
       // Replay any answers that were saved to localStorage during a previous offline session
-      // before fetching lastAnswered — so the DB is current before we compute startIndex.
+      // before fetching lastAnswered, so the DB is current before we compute startIndex.
       await flushLocalStorageDrafts(user.id);
 
       let test: Test | null;
@@ -1305,7 +1323,7 @@ function MockTest() {
         return;
       }
 
-      // Build all question pools — practice queue first so adaptive inits can see resolved topics
+      // Build all question pools, practice queue first so adaptive inits can see resolved topics
       if (test) {
         await initPracticeQueue(test);
         await Promise.all([initEnglishAdaptive(test), initMathAdaptive(test)]);
@@ -1342,13 +1360,13 @@ function MockTest() {
   }, [user]);
 
   // Fetch media whenever the active question changes.
-  // useLayoutEffect so the setMediaItems([]) clear runs before the browser paints —
+  // useLayoutEffect so the setMediaItems([]) clear runs before the browser paints -
   // eliminates the one-frame flash of the previous question's media on cache misses.
   // A cancel flag prevents a slow previous fetch from overwriting fresher media.
   useLayoutEffect(() => {
     if (!questionData?.uid) { setMediaItems([]); return; }
 
-    // Cache hit path: media was already set synchronously in fetchByUID — skip async fetch
+    // Cache hit path: media was already set synchronously in fetchByUID, skip async fetch
     if (mediaSetForRef.current === questionData.uid) {
       mediaSetForRef.current = null;
       return;
@@ -1375,9 +1393,9 @@ function MockTest() {
           setMediaItems((data as MediaItem[]) ?? []);
           return;
         }
-        // error — retry after delay
+        // error, retry after delay
       }
-      // All retries exhausted with errors — leave media empty
+      // All retries exhausted with errors, leave media empty
     })();
     return () => { cancelled = true; };
   }, [questionData?.uid]);
@@ -1411,7 +1429,7 @@ function MockTest() {
     setTimeRemaining(remaining);
 
     timerRef.current = setInterval(() => {
-      // Pause when offline or when the DB is unreachable — both refs avoid stale closures.
+      // Pause when offline or when the DB is unreachable, both refs avoid stale closures.
       if (!isOnlineRef.current || !isDbReachableRef.current) return;
       remaining -= 1;
       localStorage.setItem(storageKey, remaining.toString());
@@ -1462,7 +1480,7 @@ function MockTest() {
   }, [flushPendingSaves]);
 
   // Periodic retry: when answers are queued (pendingCount > 0), retry every 10 seconds.
-  // This handles DB-down-while-online scenarios — not just network offline events.
+  // This handles DB-down-while-online scenarios, not just network offline events.
   // Stops automatically once the queue drains (pendingCount returns to 0).
   useEffect(() => {
     if (pendingCount === 0) return;
@@ -1470,7 +1488,7 @@ function MockTest() {
     return () => clearInterval(id);
   }, [pendingCount, flushPendingSaves]);
 
-  // DB recovery ping — runs every 5 s when the DB is marked unreachable.
+  // DB recovery ping, runs every 5 s when the DB is marked unreachable.
   // Handles the case where pendingCount is 0 but a question fetch failed (e.g.
   // the upsert happened to succeed but the parallel question fetch did not).
   // On recovery: marks DB reachable, flushes any queued saves, and executes the
@@ -1495,25 +1513,11 @@ function MockTest() {
     return () => clearInterval(id);
   }, [isDbReachable, isOnline, flushPendingSaves, testID]);
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  //  Render
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-slate-50">
-      {/* Pause banner — shown when network is down OR when DB is unreachable.
-          Both cases stop the timer and disable Submit. The message tells the student
-          their progress is safe so they don't panic and close the tab. */}
-      {(!isOnline || !isDbReachable) && (
-        <div className="fixed inset-x-0 top-0 z-60 flex items-center justify-center gap-2.5 bg-amber-500 text-white text-sm font-semibold py-3 px-4 shadow-lg">
-          <svg className="w-4 h-4 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18.364 5.636a9 9 0 010 12.728M15.536 8.464a5 5 0 010 7.072M4.929 4.929l14.142 14.142" />
-          </svg>
-          {!isOnline
-            ? "No internet connection — your test and timer are paused. Reconnect to continue."
-            : "Server connection lost — your test and timer are paused. Your progress is safe. Reconnecting…"}
-        </div>
-      )}
-
-      {/* Init error overlay — shown when progress load fails (DB error, auth issue, etc.).
+      {/* Init error overlay, shown when progress load fails (DB error, auth issue, etc.).
           Prevents silent restart from Q1 by making the failure visible and actionable. */}
       {loadError && (
         <div className="fixed inset-0 bg-slate-50 flex flex-col items-center justify-center z-50 p-8 gap-5">
@@ -1524,7 +1528,7 @@ function MockTest() {
           </div>
           <div className="text-center max-w-sm">
             <h2 className="text-lg font-bold text-slate-900 mb-1">Couldn't load your progress</h2>
-            <p className="text-sm text-slate-500">There was a connection problem retrieving your answers. Your progress is safe — please refresh the page to try again.</p>
+            <p className="text-sm text-slate-500">There was a connection problem retrieving your answers. Your progress is safe, please refresh the page to try again.</p>
           </div>
           <button
             type="button"
@@ -1584,7 +1588,7 @@ function MockTest() {
         </div>
       )}
 
-      {/* Pre-test rules overlay — shown once for new (not resumed) non-diagnostic tests */}
+      {/* Pre-test rules overlay, shown once for new (not resumed) non-diagnostic tests */}
       {testReady && showTestRules && (
         <div className="fixed inset-0 bg-slate-50 flex flex-col items-center justify-center z-50 p-4 sm:p-8 overflow-y-auto">
           <div className="max-w-lg w-full flex flex-col gap-4 sm:gap-5 py-4">
@@ -1618,7 +1622,7 @@ function MockTest() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
                 </svg>
                 <div className="text-sm text-teal-800">
-                  <span className="font-bold">Mixed numbers:</span> A number like <span className="font-semibold">1 and 1/2</span> or <span className="font-semibold">3 and 4/5</span> means a whole number combined with a fraction — so "2 and 3/4" is the same as 2¾. The word "and" separates the whole part from the fraction part.
+                  <span className="font-bold">Mixed numbers:</span> A number like <span className="font-semibold">1 and 1/2</span> or <span className="font-semibold">3 and 4/5</span> means a whole number combined with a fraction, so "2 and 3/4" is the same as 2¾. The word "and" separates the whole part from the fraction part.
                 </div>
               </div>
               <div className="flex items-start gap-3 p-3.5 bg-violet-50 border border-violet-200 rounded-xl">
@@ -1626,7 +1630,7 @@ function MockTest() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div className="text-sm text-violet-800">
-                  <span className="font-bold">Repeating decimals:</span> A decimal written as <span className="font-semibold">0.333...</span> or <span className="font-semibold">0.142857...</span> means the digits after the "..." keep repeating in the same pattern forever — the three dots tell you the pattern continues without end.
+                  <span className="font-bold">Repeating decimals:</span> A decimal written as <span className="font-semibold">0.333...</span> or <span className="font-semibold">0.142857...</span> means the digits after the "..." keep repeating in the same pattern forever, the three dots tell you the pattern continues without end.
                 </div>
               </div>
             </div>
@@ -1644,6 +1648,18 @@ function MockTest() {
 
       {/* Header + ELA toolbar (sticky together as one unit) */}
       <div className="bg-white border-b border-slate-100 shadow-sm shrink-0 sticky top-0 z-10">
+      {/* Pause banner. Lives inside the sticky header rather than over it, so it pushes
+          the title, counter and timer down instead of covering them. */}
+      {(!isOnline || !isDbReachable) && (
+        <div className="flex items-center justify-center gap-2.5 bg-amber-500 text-white text-sm font-semibold py-3 px-4">
+          <svg className="w-4 h-4 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18.364 5.636a9 9 0 010 12.728M15.536 8.464a5 5 0 010 7.072M4.929 4.929l14.142 14.142" />
+          </svg>
+          {!isOnline
+            ? "No internet connection: your test and timer are paused. Reconnect to continue."
+            : "Server connection lost: your test and timer are paused. Your progress is safe. Reconnecting…"}
+        </div>
+      )}
       <div className="px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between">
         {/* Left: name + home */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -1662,13 +1678,13 @@ function MockTest() {
           )}
         </div>
 
-        {/* Center: question counter — context-aware */}
+        {/* Center: question counter, context-aware */}
         <div className="flex flex-col items-center shrink-0 px-2 sm:px-4">
           {(() => {
             if (!currentTest) return (
               <>
                 <span className="text-xs font-semibold uppercase tracking-widest text-slate-400 leading-tight">Question</span>
-                <span className="text-sm font-bold text-slate-800 tabular-nums">—</span>
+                <span className="text-sm font-bold text-slate-800 tabular-nums">-</span>
               </>
             );
             const cfg             = currentTest.configuration as Record<string, unknown> | null;
@@ -1683,7 +1699,7 @@ function MockTest() {
                 </span>
               </>
             );
-            // Full mock test — section-aware display
+            // Full mock test, section-aware display
             const englishCfg   = cfg?.english as { count?: number } | null;
             const englishCount = englishCfg?.count ?? Math.floor(currentTest.total_questions / 2);
             const subject      = questionData?.subject ?? "";
@@ -1745,7 +1761,7 @@ function MockTest() {
         </div>
       </div>{/* end main header row */}
 
-      {/* Annotation toolbar — shown for all subjects */}
+      {/* Annotation toolbar, shown for all subjects */}
       {questionData && (
         <div className="px-3 sm:px-6 py-1.5 border-t border-slate-100 bg-slate-50/80 overflow-x-auto">
           <ELAToolbar
@@ -1756,7 +1772,7 @@ function MockTest() {
       )}
       </div>{/* end sticky header + toolbar wrapper */}
 
-      {/* Pending-saves indicator — fixed bottom-left, mirrors Flag button.
+      {/* Pending-saves indicator, fixed bottom-left, mirrors Flag button.
           Visible whenever answers are queued and not yet confirmed by the DB.
           Disappears automatically once all answers have been saved. */}
       {pendingCount > 0 && (
@@ -1765,11 +1781,11 @@ function MockTest() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          {pendingCount} answer{pendingCount > 1 ? "s" : ""} not saved — retrying…
+          {pendingCount} answer{pendingCount > 1 ? "s" : ""} not saved, retrying…
         </div>
       )}
 
-      {/* Flag button — fixed bottom-right, only when a live question is shown */}
+      {/* Flag button, fixed bottom-right, only when a live question is shown */}
       {questionData && !isReadOnly && (
         <button
           type="button"
@@ -1785,7 +1801,10 @@ function MockTest() {
 
       {/* Report modal */}
       {showReportModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onMouseDown={e => { if (e.target === e.currentTarget) setShowReportModal(false); }}
+        >
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-4 sm:p-6 flex flex-col gap-4">
             <div className="flex items-start justify-between">
               <div>
@@ -1796,6 +1815,7 @@ function MockTest() {
               </div>
               <button
                 type="button"
+                aria-label="Close"
                 onClick={() => setShowReportModal(false)}
                 className="text-slate-400 hover:text-slate-600 w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors"
               >
@@ -1810,7 +1830,7 @@ function MockTest() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="text-sm font-semibold text-slate-700">Report submitted — thank you!</p>
+                <p className="text-sm font-semibold text-slate-700">Report submitted, thank you!</p>
               </div>
             ) : (
               <>
@@ -1845,7 +1865,7 @@ function MockTest() {
 
                 {reportError && (
                   <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-center">
-                    Failed to submit — please try again.
+                    Failed to submit: please try again.
                   </p>
                 )}
                 <button
@@ -1862,13 +1882,13 @@ function MockTest() {
         </div>
       )}
 
-      {/* Question area — stacks vertically on mobile, side-by-side on large screens */}
+      {/* Question area, stacks vertically on mobile, side-by-side on large screens */}
       <div className="relative flex flex-col lg:flex-row items-start justify-center py-4 sm:py-8 px-3 sm:px-6 flex-1 gap-4">
         {questionData ? (
           <>
-            {/* Left panel — full width on mobile, 45% on large screens */}
+            {/* Left panel, full width on mobile, 45% on large screens */}
             {displayMedia.length > 0 && (
-              // Outer wrapper: sized/sticky/relative — line mask lives here so it stays over the visible area
+              // Outer wrapper: sized/sticky/relative, line mask lives here so it stays over the visible area
               // max-h on mobile/tablet caps the passage so the question stays visible without excessive scrolling
               <div className="relative w-full max-h-[45vh] sm:max-h-[50vh] lg:max-h-none lg:w-[45%] lg:min-w-72 lg:max-w-[65%] lg:h-[calc(100vh-8rem)] lg:min-h-48 lg:self-start lg:sticky lg:top-20 rounded-2xl overflow-hidden">
                 {/* Inner: scrollable content */}
@@ -1876,6 +1896,7 @@ function MockTest() {
                   ref={passageContainerRef}
                   className="relative flex flex-col h-full lg:resize overflow-auto bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6"
                   onMouseUp={() => elaTools.activeTool === "highlight" && captureHighlight(passageContainerRef.current, `p-${questionData.uid}`)}
+                  onTouchEnd={() => elaTools.activeTool === "highlight" && captureHighlight(passageContainerRef.current, `p-${questionData.uid}`)}
                 >
                   <MediaDisplay mediaItems={displayMedia} />
                   {/* Highlight overlays for passage */}
@@ -1885,21 +1906,21 @@ function MockTest() {
                       style={{ top: h.top, left: h.left, width: h.width, height: h.height, background: "rgba(251,191,36,0.35)", mixBlendMode: "multiply" } as React.CSSProperties}
                     />
                   ))}
-                  {/* Pencil canvas inside scrollable — strokes correctly track scroll position */}
+                  {/* Pencil canvas inside scrollable, strokes correctly track scroll position */}
                   <ELAPencilCanvas
                     active={elaTools.activeTool === "pencil"}
                     strokes={elaTools.getPencilState(questionData.uid ?? "").strokes}
                     onAddStroke={stroke => elaTools.addStroke(questionData.uid ?? "", stroke)}
                   />
                 </div>
-                {/* Line Reader outside scrollable — stays fixed over the visible panel area while content scrolls */}
+                {/* Line Reader outside scrollable, stays fixed over the visible panel area while content scrolls */}
                 {elaTools.activeTool === "linereader" && (
                   <ELALineMask maskY={elaTools.lineMaskY} onMove={elaTools.setLineMaskY} />
                 )}
               </div>
             )}
 
-            {/* Right panel — full width on mobile, flexible on large screens */}
+            {/* Right panel, full width on mobile, flexible on large screens */}
             <div className={`relative bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-8 flex flex-col gap-5 w-full ${displayMedia.length > 0 ? "lg:flex-1" : "lg:max-w-3xl lg:mx-auto"}`}>
               {/* Pencil canvas and Line Reader on right panel only when there is no passage/media panel */}
               {displayMedia.length === 0 && questionData && (
@@ -1925,7 +1946,7 @@ function MockTest() {
                 )}
               </div>
 
-              {/* Question text — hidden for types that render their own text inline */}
+              {/* Question text, hidden for types that render their own text inline */}
               {!["inline-dropdown", "drag_fill_single", "drag_fill_multiple"].includes(questionData.type) && (() => {
                 const extra = ((questionData as Record<string, unknown>).extra_data as Record<string, unknown> | null) ?? {};
                 const vars = Array.isArray(extra.variables) ? extra.variables as string[] : [];
@@ -1934,6 +1955,7 @@ function MockTest() {
                     ref={questionTextContainerRef}
                     className="relative text-base leading-relaxed text-slate-800"
                     onMouseUp={() => elaTools.activeTool === "highlight" && captureHighlight(questionTextContainerRef.current, `q-${questionData.uid}`)}
+                    onTouchEnd={() => elaTools.activeTool === "highlight" && captureHighlight(questionTextContainerRef.current, `q-${questionData.uid}`)}
                   >
                     {parseFormattedText(questionData.text ?? "", "", vars)}
                     {/* Highlight overlays for question text */}
@@ -1947,7 +1969,7 @@ function MockTest() {
                 );
               })()}
 
-              {/* Answer input — key forces full remount on question change */}
+              {/* Answer input, key forces full remount on question change */}
               {(() => {
                 const qd = questionData as Record<string, unknown>;
                 const extra = (qd.extra_data as Record<string, unknown> | null) ?? {};
@@ -1964,7 +1986,7 @@ function MockTest() {
                 return (
                   <QuestionRenderer
                     key={currentQuestion}
-                    chosenAnswer={setChosenAnswer}
+                    chosenAnswer={handleAnswerChange}
                     type={questionData.type as "mcq" | "grid-in" | "linear_graphing" | "multi-select" | "expression" | "inline-dropdown" | "number_line_click" | "table_row_radio" | "drag_fill_single" | "drag_fill_multiple" | "drag_to_bin" | "drag_to_categorize" | "in_passage_sentence_select" | "inline_text_span_click"}
                     uid={questionData.uid}
                     options={baseOptions}
@@ -1991,7 +2013,7 @@ function MockTest() {
                 );
               })()}
 
-              {/* Navigation row — back left, submit right */}
+              {/* Navigation row, back left, submit right */}
               <div className="flex flex-col gap-2 pt-1">
                 {nullSubmission && (
                   <p className="text-xs sm:text-sm text-rose-600 font-medium animate-bounce text-center">
@@ -2049,7 +2071,7 @@ function MockTest() {
         )}
       </div>
 
-      {/* ELA Notepad — floating, persists for entire ELA section */}
+      {/* ELA Notepad, floating, persists for entire ELA section */}
       <ELANotepad
         open={elaTools.notesOpen}
         notes={elaTools.notes}

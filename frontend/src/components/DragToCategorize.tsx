@@ -16,7 +16,7 @@ function initPlacements(answer: string, itemCount: number): (string | null)[] {
 interface Props {
   items: string[];    // word/expression chips
   bins: string[];     // category column headers
-  chosenAnswer: (answer: string) => void; // "-,A,B,-,A" — "-" for unplaced distractors
+  chosenAnswer: (answer: string) => void; // "-,A,B,-,A", "-" for unplaced distractors
   isReadOnly?: boolean;
   previousAnswer?: string;
   answer?: string;    // correct "-,A,B,-,A" (review mode)
@@ -56,7 +56,7 @@ export default function DragToCategorize({
     chosenAnswer(buildAnswer(p));
   }
 
-  // ── Interaction ────────────────────────────────────────────────────────────────
+  //  Interaction
 
   function handleItemClick(idx: number) {
     if (isReadOnly) return;
@@ -94,7 +94,7 @@ export default function DragToCategorize({
     emit(next);
   }
 
-  // ── Derived ────────────────────────────────────────────────────────────────────
+  //  Derived
 
   const displayPlacements = isReadOnly ? initPlacements(previousAnswer, items.length) : placements;
   const correctPlacements = initPlacements(answer, items.length);
@@ -108,12 +108,12 @@ export default function DragToCategorize({
     const colLetter = LETTERS[colIdx];
     return items
       .map((item, i) => ({ item, idx: i }))
-      .filter(({ i: _ = 0, idx }) => displayPlacements[idx] === colLetter);
+      .filter(({ idx }) => displayPlacements[idx] === colLetter);
   }
 
   return (
     <div className="flex flex-col gap-4">
-      {/* ── Item pool ─────────────────────────────────────────────────────────── */}
+      {/*  Item pool  */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider select-none">
@@ -156,12 +156,12 @@ export default function DragToCategorize({
             );
           })}
           {!isReadOnly && items.every((_, i) => displayPlacements[i] !== null) && (
-            <span className="text-xs text-zinc-300 italic self-center">pool empty — click items in columns to move them back</span>
+            <span className="text-xs text-zinc-300 italic self-center">pool empty, click items in columns to move them back</span>
           )}
         </div>
       </div>
 
-      {/* ── Category table ────────────────────────────────────────────────────── */}
+      {/*  Category table  */}
       <div
         className={`grid gap-2`}
         style={{ gridTemplateColumns: `repeat(${bins.length}, minmax(0, 1fr))` }}
@@ -216,7 +216,7 @@ export default function DragToCategorize({
                 })}
                 {inCol.length === 0 && (
                   <span className="text-xs text-zinc-300 italic text-center mt-2 select-none">
-                    {!isReadOnly && hasSelected ? "place here" : "—"}
+                    {!isReadOnly && hasSelected ? "place here" : "-"}
                   </span>
                 )}
               </div>
@@ -225,7 +225,7 @@ export default function DragToCategorize({
         })}
       </div>
 
-      {/* ── Correct answer panel (read-only, if any wrong) ─────────────────── */}
+      {/*  Correct answer panel (read-only, if any wrong)  */}
       {isReadOnly && items.some((_, i) =>
         correctPlacements[i] !== null && displayPlacements[i] !== correctPlacements[i]
       ) && (
@@ -234,7 +234,7 @@ export default function DragToCategorize({
           <div className="flex flex-wrap gap-2">
             {items.map((item, i) => {
               const cl = correctPlacements[i];
-              if (!cl) return null; // distractor — no correct category
+              if (!cl) return null; // distractor, no correct category
               const colName = bins[LETTERS.indexOf(cl as (typeof LETTERS)[number])] ?? cl;
               const isRight = displayPlacements[i] === cl;
               return (

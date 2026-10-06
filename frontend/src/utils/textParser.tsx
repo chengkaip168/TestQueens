@@ -59,14 +59,14 @@ function applyVarItalics(text: string, variables: string[], keyPrefix: string): 
 // Splits raw passage text (from dictionary_of_media.content) into clean paragraphs,
 // and wraps inline sentence/paragraph numbers in () when they form a sequential chain.
 //
-// Pass 1 — paragraph splitting and number normalisation:
+// Pass 1, paragraph splitting and number normalisation:
 //  - Collapses mid-sentence hard line-breaks (PDF/copy-paste artefacts) to spaces.
 //  - Splits at \n\n+ (always a boundary) or at \n before a numbered paragraph marker
-//    (1-2 digit + Capital+lowercase, e.g. "1 In", "2 Roger") — conservative enough to
+//    (1-2 digit + Capital+lowercase, e.g. "1 In", "2 Roger"), conservative enough to
 //    avoid false splits on "1,500 students", "12 percent", "1 A mile", etc.
 //  - Normalises leading paragraph numbers to "(N) " format.
 //
-// Pass 2 — inline sentence-number wrapping:
+// Pass 2, inline sentence-number wrapping:
 //  - After collapsing line-breaks, numbers that WERE on their own lines but started
 //    with "I " (pronoun) or other patterns that defeated the split heuristic end up
 //    inline (e.g. "... end of sentence. 2 I believe …").
@@ -79,7 +79,7 @@ function applyVarItalics(text: string, variables: string[], keyPrefix: string): 
 export function processPassage(raw: string): string[] {
   const text = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
-  // ── Pass 1: split + normalise ────────────────────────────────────────────────
+  //  Pass 1: split + normalise
   const chunks = text.split(
     /\n{2,}|\n(?=\(?\d{1,2}[.)]\s*["'""']?[A-Z])/
   );
@@ -94,7 +94,7 @@ export function processPassage(raw: string): string[] {
     })
     .filter(Boolean);
 
-  // ── Pass 2: inline sentence-number wrapping ──────────────────────────────────
+  //  Pass 2: inline sentence-number wrapping
   // Collect all numbers: already-wrapped (N) AND bare candidates at word boundaries
   // before a capital letter (excludes digit-embedded words like "serial1").
   const nums = new Set<number>();
@@ -125,11 +125,8 @@ export function parseFormattedText(raw: string, keyPrefix: string = "", variable
 
   // 1. Decode HTML entities
   // 2. Normalise <br> variants to \n
-  // 3. Ensure a space next to inline tags so they don't merge with surrounding words
   const text = decodeEntities(raw)
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/(\S)(<(?:b|i|u|strong|em)>)/gi, "$1 $2")
-    .replace(/(<\/(?:b|i|u|strong|em)>)([^\s.,;:!?'"\n])/gi, "$1 $2");
+    .replace(/<br\s*\/?>/gi, "\n");
 
   const parts = text.split(TAG_REGEX);
   const result: ReactNode[] = [];
@@ -174,11 +171,11 @@ export function parseFormattedText(raw: string, keyPrefix: string = "", variable
       result.push(<sub key={`${keyPrefix}sub-${idx}`}>{parseFormattedText(inner, `${keyPrefix}sub-${idx}-`, variables)}</sub>);
 
     } else {
-      // Plain text — convert \n to <br />, caret notation to <sup> (e.g. x^2 → x²), italicize variables
+      // Plain text, convert \n to <br />, caret notation to <sup> (e.g. x^2 → x²), italicize variables
       const lines = part.split("\n");
       lines.forEach((line, li) => {
         if (line) {
-          const caretRe = /([^\s^]+)\^([^\s^]+)/g;
+          const caretRe = /([^\s^]+)\^(-?\d+(?:\.\d+)?|[A-Za-z])/g;
           let m: RegExpExecArray | null;
           let lastIdx = 0;
           while ((m = caretRe.exec(line)) !== null) {

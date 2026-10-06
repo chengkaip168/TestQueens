@@ -13,16 +13,27 @@ function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
   const navigate = useNavigate();
 
   async function sendResetEmail(e: React.FormEvent) {
     e.preventDefault();
+    setForgotError("");
     setForgotLoading(true);
-    await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
-      redirectTo: window.location.origin,
-    });
-    setForgotLoading(false);
-    setForgotSent(true);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+        redirectTo: window.location.origin,
+      });
+      if (resetError) {
+        setForgotError("Couldn't send the reset link. Check the address and try again.");
+        return;
+      }
+      setForgotSent(true);
+    } catch {
+      setForgotError("Connection failed. Check your internet connection and try again.");
+    } finally {
+      setForgotLoading(false);
+    }
   }
 
   async function signIn() {
@@ -55,32 +66,26 @@ function LoginPage() {
 
   return (
     <div className="tq-login">
-      {/* Structural backdrop: parchment, then a solid navy panel whose hard
-          left edge the card straddles and blurs, then grain over both. */}
-      <div className="tq-canvas" aria-hidden="true">
-        <div className="tq-bg" />
-        <div className="tq-panel" />
-        <div className="tq-grain" />
-      </div>
-
       <div className="tq-shell">
-      {/* Left panel — branding */}
+      {/* Branding column */}
       <div className="tq-brandzone">
         <div className="tq-brand-inner">
-          <h1 className="tq-a-lockup">
-            <LogoLockup className="tq-lockup" />
+          <h1>
+            <a href="#/" aria-label="TestQueens home">
+              <LogoLockup className="tq-lockup" />
+            </a>
           </h1>
-          <p className="tq-tagline tq-a-tagline">
-            Master the SHSAT with smart,<br />personalized practice.
+          <p className="tq-tagline">
+            Practice tests for the SHSAT, with results that show you what to work on next.
           </p>
-          <hr className="tq-rule tq-a-rule" aria-hidden="true" />
+          <hr className="tq-rule" aria-hidden="true" />
           <div className="tq-bullets">
             {[
-              "Pinpoint your weak spots in one diagnostic",
-              "See exactly where your points are slipping",
-              "Drill the topics that actually move your score",
-            ].map((f, i) => (
-              <div key={f} className={`tq-bullet tq-a-b${i + 1}`}>
+              "Take a diagnostic test to find out where you stand",
+              "See your results broken down by topic",
+              "Practice the question types you keep getting wrong",
+            ].map((f) => (
+              <div key={f} className="tq-bullet">
                 <svg className="tq-bullet-mark" viewBox="0 0 10 10" aria-hidden="true">
                   <path d="M5 0 L10 5 L5 10 L0 5 Z" />
                 </svg>
@@ -91,18 +96,22 @@ function LoginPage() {
         </div>
       </div>
 
-      {/* Right panel — form */}
+      {/* Sign-in column */}
       <div className="tq-formzone">
-        <div className="tq-card tq-a-card">
+        <div className="tq-card">
           <div className="tq-mobile-brand">
-            <LogoLockup className="h-10 w-auto" />
+            <a href="#/" aria-label="TestQueens home">
+              <LogoLockup className="tq-lockup" />
+            </a>
           </div>
-          <div className="tq-card-head">
-            <h2 className="tq-h2">Welcome</h2>
-            <p className="tq-sub">Sign in to continue your practice.</p>
-          </div>
+          {!showForgot && (
+            <div className="tq-card-head">
+              <h2 className="tq-h2">Sign in</h2>
+              <p className="tq-sub">Use the email and password you signed up with.</p>
+            </div>
+          )}
           {showForgot ? (
-            /* ── Forgot password inline form ── */
+            /*  Forgot password inline form */
             forgotSent ? (
               <div className="tq-sent">
                 <div className="tq-sent-badge">
@@ -140,9 +149,11 @@ function LoginPage() {
                     placeholder="you@example.com"
                     autoFocus
                     required
+                    autoComplete="email"
                     className="tq-input"
                   />
                 </label>
+                {forgotError && <p className="tq-error">{forgotError}</p>}
                 <button
                   type="submit"
                   disabled={forgotLoading}
@@ -153,27 +164,29 @@ function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowForgot(false)}
-                  className="tq-link tq-link-quiet"
+                  className="tq-link"
                 >
                   Back to sign in
                 </button>
               </form>
             )
           ) : (
-            /* ── Normal sign-in form ── */
+            /*  Normal sign-in form */
             <>
               <form className="tq-form" onSubmit={(e) => { e.preventDefault(); signIn(); }}>
-                <label className="tq-field tq-a-f1">
+                <label className="tq-field">
                   <span className="tq-label">Email</span>
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
                     placeholder="you@example.com"
+                    autoComplete="email"
+                    required
                     className="tq-input"
                   />
                 </label>
-                <label className="tq-field tq-a-f2">
+                <label className="tq-field">
                   <div className="tq-field-row">
                     <span className="tq-label">Password</span>
                     <button
@@ -187,8 +200,10 @@ function LoginPage() {
                   <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => { setPassword(e.target.value); if (error) setError(""); }}
                     placeholder="••••••••"
+                    autoComplete="current-password"
+                    required
                     className="tq-input"
                   />
                 </label>
@@ -200,12 +215,12 @@ function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="tq-btn tq-a-f3"
+                  className="tq-btn"
                 >
-                  {loading ? "Signing in…" : "Sign In"}
+                  {loading ? "Signing in…" : "Sign in"}
                 </button>
               </form>
-              <p className="tq-foot tq-a-f4">
+              <p className="tq-foot">
                 Don't have an account?{" "}
                 <button
                   type="button"
@@ -221,10 +236,23 @@ function LoginPage() {
       </div>
       </div>
 
-      {/* Footer — copyright only; there are no privacy/terms pages. */}
-      <div className="tq-footer">
-        <span className="tq-foot-copy">© 2026 TestQueens</span>
-      </div>
+      <footer className="tq-footer">
+        <div className="tq-footer-inner">
+          <span className="tq-foot-copy">&copy; {new Date().getFullYear()} TestQueens</span>
+          <a href="#/privacy" className="tq-foot-link">Privacy</a>
+          <a href="#/terms" className="tq-foot-link">Terms</a>
+          <p className="tq-foot-biz">
+            Chan Tutoring Center, 6012b 18th Ave, Brooklyn, NY 11204{" · "}
+            <a href="mailto:info@chantutoringcenter.com" className="tq-foot-link">
+              info@chantutoringcenter.com
+            </a>
+          </p>
+          <p className="tq-foot-note">
+            Not affiliated with or endorsed by the New York City Department of Education.
+            Score estimates shown on this site are our own and are not official SHSAT scores.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

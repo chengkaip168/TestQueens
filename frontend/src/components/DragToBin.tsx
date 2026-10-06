@@ -46,7 +46,7 @@ export default function DragToBin({
     chosenAnswer(p.every(x => x !== null) ? (p as string[]).join(",") : "");
   }
 
-  // ── Interaction ────────────────────────────────────────────────────────────────
+  //  Interaction
 
   function handleItemClick(idx: number) {
     if (isReadOnly) return;
@@ -86,7 +86,7 @@ export default function DragToBin({
     emit(next);
   }
 
-  // ── Derived review data ────────────────────────────────────────────────────────
+  //  Derived review data
 
   const displayPlacements = isReadOnly ? initPlacements(previousAnswer, items.length) : placements;
   const correctPlacements = initPlacements(answer, items.length);
@@ -96,7 +96,7 @@ export default function DragToBin({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ── Item pool ─────────────────────────────────────────────────────────── */}
+      {/*  Item pool  */}
       <div className="flex flex-col gap-2">
         <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider select-none">
           {isReadOnly
@@ -143,7 +143,7 @@ export default function DragToBin({
         </div>
       </div>
 
-      {/* ── Bins ──────────────────────────────────────────────────────────────── */}
+      {/*  Bins  */}
       <div className={`grid gap-3 ${bins.length === 2 ? "grid-cols-2" : bins.length === 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4"}`}>
         {bins.map((binLabel, binIdx) => {
           const binLetter   = LETTERS[binIdx];
@@ -206,7 +206,7 @@ export default function DragToBin({
         })}
       </div>
 
-      {/* ── Correct answer panel (read-only, if any wrong) ─────────────────── */}
+      {/*  Correct answer panel (read-only, if any wrong)  */}
       {isReadOnly && items.some((_, i) => displayPlacements[i] !== correctPlacements[i]) && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3 flex flex-col gap-2">
           <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Correct assignments</p>

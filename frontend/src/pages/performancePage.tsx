@@ -10,8 +10,8 @@ import { supabase } from "../supabase-client";
 import { UserContext } from "../components/userContext";
 import { Test } from "../components/types";
 
-// ─── constants ────────────────────────────────────────────────────────────────
-// Weights match scoring.ts exactly — easy=1, medium=1.5, hard=2
+//  constants
+// Weights match scoring.ts exactly, easy=1, medium=1.5, hard=2
 const DIFF_W: Record<string, number> = { easy: 1, medium: 1.5, hard: 2 };
 const SHSAT_SECS = 10_800; // 3 h in seconds
 
@@ -41,7 +41,7 @@ const LINE_COLOR_CLS: Record<string, string> = {
   "#8b5cf6": "text-violet-600",
 };
 
-// ─── types ────────────────────────────────────────────────────────────────────
+//  types
 interface MergedQ {
   id: string;
   test_id: string;
@@ -66,7 +66,7 @@ interface Advice {
   heading: string; body: string;
 }
 
-// ─── score prediction ─────────────────────────────────────────────────────────
+//  score prediction
 function computePrediction(qs: MergedQ[], budgetPerQ: number): Prediction {
   let earnedW = 0, totalW = 0;
   for (const q of qs) {
@@ -85,7 +85,7 @@ function computePrediction(qs: MergedQ[], budgetPerQ: number): Prediction {
   return { score: Math.round(baseAcc * timeFactor * 500 + 200), accuracyOnly, timeFactor, avgSecs };
 }
 
-// ─── subcategory display name ─────────────────────────────────────────────────
+//  subcategory display name
 function fmtSub(raw: string): string {
   return raw
     .replace(/_/g, " ")
@@ -95,7 +95,13 @@ function fmtSub(raw: string): string {
     .replace(/\band\b/g, "&");
 }
 
-// ─── advice ───────────────────────────────────────────────────────────────────
+// Subject keys are stored lowercase ("english"/"math"); capitalize only for display.
+function subjectLabel(raw: string | null | undefined): string {
+  if (!raw) return "Other";
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+//  advice
 // Keys match DB sub_category values exactly.
 const TIPS: Record<string, string> = {
   // English
@@ -106,7 +112,7 @@ const TIPS: Record<string, string> = {
   Authors_Purpose:
     "Ask: is the author informing, persuading, or entertaining? Signal words like 'argue', 'describe', or 'explain' reveal the purpose.",
   Central_Idea:
-    "The central idea is the one point every paragraph supports. Summarize the whole passage in a single sentence — that's your central idea.",
+    "The central idea is the one point every paragraph supports. Summarize the whole passage in a single sentence, that's your central idea.",
   Comma_Usage:
     "Commas join independent clauses with a conjunction, follow introductory phrases, and separate items in a list. Review these three rules.",
   Figurative_Language:
@@ -114,11 +120,11 @@ const TIPS: Record<string, string> = {
   Main_Idea:
     "Read the first and last sentence of each paragraph. The main idea is broader than any single detail and is usually in the topic sentence.",
   "Organization-Concluding_Sentence":
-    "A concluding sentence wraps up the paragraph's main point without introducing new ideas — it restates the topic in different words.",
+    "A concluding sentence wraps up the paragraph's main point without introducing new ideas, it restates the topic in different words.",
   "Organization-Logical_Placement":
     "Read the sentences before and after the blank. Transition words (however, therefore, also) are direct clues to the correct position.",
   "Organization-Paragraph_Unity":
-    "Every sentence must support the topic sentence. Find the one that introduces a different subject — that's what doesn't belong.",
+    "Every sentence must support the topic sentence. Find the one that introduces a different subject, that's what doesn't belong.",
   "Organization-Topic_Sentence":
     "A topic sentence must be general enough to cover all the details in the paragraph. If it's too specific, it's not the topic sentence.",
   "Organization-Transitions":
@@ -128,7 +134,7 @@ const TIPS: Record<string, string> = {
   Poetic_Technique:
     "Identify alliteration, repetition, rhyme scheme, and figurative devices. Ask how each technique reinforces mood or meaning.",
   Point_of_View:
-    "Separate the narrator's perspective from the author's. First-person narrators can be unreliable — look for signs of bias.",
+    "Separate the narrator's perspective from the author's. First-person narrators can be unreliable, look for signs of bias.",
   Pronoun_Agreement:
     "A pronoun must agree with its antecedent in number. Watch collective nouns (team = singular) and indefinite pronouns (everyone = singular).",
   Sentence_Combining:
@@ -138,21 +144,21 @@ const TIPS: Record<string, string> = {
   Setting:
     "Notice descriptive details about time, place, and atmosphere. Consider how the setting shapes character mood and plot events.",
   "Style-Word_Choice":
-    "Ask why this specific word over a synonym — consider tone (formal vs. informal), connotation (positive vs. negative), and precision.",
+    "Ask why this specific word over a synonym, consider tone (formal vs. informal), connotation (positive vs. negative), and precision.",
   "Subject-Verb_Agreement":
     "Find the true subject (ignore prepositional phrases) then match the verb. Compound subjects joined by 'and' take plural verbs.",
   Summarization:
-    "A summary includes the main idea and key support — use your own words. Cut minor details, examples, and repeated information.",
+    "A summary includes the main idea and key support, use your own words. Cut minor details, examples, and repeated information.",
   Text_Feature:
     "Read captions, headings, and graphs independently, then ask how each feature relates to the main text's argument or narrative.",
   Text_Structure:
     "Identify the pattern: cause-effect, compare-contrast, problem-solution, sequence, or description. Signal words reveal structure.",
   Textual_Evidence:
-    "Quote or paraphrase the exact passage section. Line numbers in the question are a direct pointer — re-read that paragraph first.",
+    "Quote or paraphrase the exact passage section. Line numbers in the question are a direct pointer, re-read that paragraph first.",
   Textual_Evidence_and_Reasoning:
     "Identify the claim, then find the evidence that directly supports it, then explain the logical link between the two.",
   Theme:
-    "Theme is a full life-lesson statement, not a one-word topic. Check every answer against the whole passage — the theme must apply broadly.",
+    "Theme is a full life-lesson statement, not a one-word topic. Check every answer against the whole passage, the theme must apply broadly.",
   Tone:
     "Track emotion-carrying words throughout the passage. The dominant feeling reveals the overall tone.",
   Verb_Tense:
@@ -166,7 +172,7 @@ const TIPS: Record<string, string> = {
   Algebra_and_Equations:
     "Translate word problems into equations first. Isolate the variable one step at a time and verify by substituting your answer back.",
   Algebraic_Expressions:
-    "Combine like terms and distribute carefully. Distributing a negative flips all signs — the most common error on this topic.",
+    "Combine like terms and distribute carefully. Distributing a negative flips all signs, the most common error on this topic.",
   Arithmetic:
     "Review PEMDAS order-of-operations. Practice mental multiplication tables and quick fraction↔decimal conversions.",
   Fraction_Word_Problems:
@@ -176,7 +182,7 @@ const TIPS: Record<string, string> = {
   Inequalities:
     "Solve like an equation but flip the inequality sign when multiplying or dividing by a negative number.",
   Inference_and_Implied_Ideas:
-    "Work only from the information given. Avoid over-inferring — the correct answer must be directly supported by the text or data.",
+    "Work only from the information given. Avoid over-inferring, the correct answer must be directly supported by the text or data.",
   "Linear_Eq._Formula":
     "Slope-intercept: y = mx + b. Slope = (y₂−y₁)/(x₂−x₁). Use two points to build the equation, then verify with a third.",
   Percentage:
@@ -184,7 +190,7 @@ const TIPS: Record<string, string> = {
   Probability:
     "P(event) = favorable ÷ total outcomes. Independent events: multiply. Mutually exclusive 'or': add.",
   "Rate-Unit_Rate":
-    "Set up as a proportion with matching units. Always check units — convert before calculating if they differ.",
+    "Set up as a proportion with matching units. Always check units, convert before calculating if they differ.",
   Ratios_and_Proportions:
     "Write ratios as fractions. Cross-multiply to solve proportions. For part-to-part ratios, find the total parts first.",
   Sequence:
@@ -216,13 +222,13 @@ function buildAdvice(
     const over = pred.avgSecs - budgetPerQ;
     if (over > budgetPerQ * 0.5)
       out.push({ type: "error", heading: "Pacing is a critical issue",
-        body: `You average ${Math.round(pred.avgSecs)}s per question — SHSAT budget is ~${budgetRound}s. At this pace you'd leave ~${Math.round((1 - pred.timeFactor) * totalQEst)} questions unanswered. Make timed drills your top priority.` });
+        body: `You average ${Math.round(pred.avgSecs)}s per question, SHSAT budget is ~${budgetRound}s. At this pace you'd leave ~${Math.round((1 - pred.timeFactor) * totalQEst)} questions unanswered. Make timed drills your top priority.` });
     else if (over > budgetPerQ * 0.1)
       out.push({ type: "warn", heading: "Watch your pacing",
         body: `You average ${Math.round(pred.avgSecs)}s/question (budget ~${budgetRound}s). You'll feel rushed near the end. Set a per-question timer to build the habit.` });
     else if (pred.avgSecs < budgetPerQ * 0.7)
       out.push({ type: "good", heading: "Strong pacing",
-        body: `You average ${Math.round(pred.avgSecs)}s/question — well within the ${budgetRound}s budget. You have spare time to review flagged answers.` });
+        body: `You average ${Math.round(pred.avgSecs)}s/question, well within the ${budgetRound}s budget. You have spare time to review flagged answers.` });
 
     const slowSubs = subs.filter(s => s.avgSecs !== null && s.avgSecs > budgetPerQ * 1.3 && s.total >= 3)
       .sort((a, b) => (b.avgSecs ?? 0) - (a.avgSecs ?? 0)).slice(0, 2);
@@ -231,16 +237,16 @@ function buildAdvice(
         body: `~${Math.round(s.avgSecs!)}s per ${fmtSub(s.name)} question (budget ~${budgetRound}s). Build speed with repeated timed drills on this topic.` });
   }
   // accuracy
-  const eng = subjects["English"], math = subjects["Math"];
+  const eng = subjects["english"], math = subjects["math"];
   if (eng && eng.accuracy < 55)
     out.push({ type: "error", heading: "English needs urgent work",
-      body: `${eng.accuracy}% accuracy on ${eng.total} questions. Reading Comprehension carries the most weight — start there.` });
+      body: `${eng.accuracy}% accuracy on ${eng.total} questions. Reading Comprehension carries the most weight, start there.` });
   else if (eng && eng.accuracy < 70)
     out.push({ type: "warn", heading: "English has room to grow",
       body: `${eng.accuracy}% accuracy. Revising/Editing questions follow predictable grammar patterns and tend to yield fast gains.` });
   if (math && math.accuracy < 55)
     out.push({ type: "error", heading: "Math needs urgent work",
-      body: `${math.accuracy}% on ${math.total} questions. Word Problems and Algebra cover the most questions — start there.` });
+      body: `${math.accuracy}% on ${math.total} questions. Word Problems and Algebra cover the most questions, start there.` });
   else if (math && math.accuracy < 70)
     out.push({ type: "warn", heading: "Math has room to grow",
       body: `${math.accuracy}% accuracy. Timed drills on Geometry and Data Analysis will recover the most points.` });
@@ -255,14 +261,14 @@ function buildAdvice(
     .sort((a, b) => b.accuracy - a.accuracy).slice(0, 2);
   if (strong.length)
     out.push({ type: "good", heading: `Strength: ${strong.map(s => fmtSub(s.name)).join(" & ")}`,
-      body: `${strong.map(s => `${s.accuracy}% in ${fmtSub(s.name)}`).join(", ")}. Keep these sharp — consistent performance earns reliable points.` });
+      body: `${strong.map(s => `${s.accuracy}% in ${fmtSub(s.name)}`).join(", ")}. Keep these sharp, consistent performance earns reliable points.` });
   if (total < 50)
     out.push({ type: "info", heading: "Answer more questions for sharper insights",
       body: `${total} questions answered so far. At 50+ the prediction and subcategory breakdown become significantly more reliable.` });
   return out;
 }
 
-// ─── recharts tooltips ────────────────────────────────────────────────────────
+//  recharts tooltips
 function SHSATTooltip({ active, payload }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
   const score = payload[0].value as number;
@@ -294,7 +300,7 @@ function AccuracyTooltip({ active, payload }: TooltipProps<number, string>) {
   );
 }
 
-// ─── small sub-components ─────────────────────────────────────────────────────
+//  small sub-components
 function Bar({ pct, color }: { pct: number; color: string }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { if (ref.current) ref.current.style.width = `${Math.max(0, Math.min(100, pct))}%`; }, [pct]);
@@ -323,7 +329,7 @@ const ASTYLE = {
   good:  { card: "border-l-4 border-emerald-400 bg-emerald-50", h: "text-emerald-700" },
 } as const;
 
-// ─── page ─────────────────────────────────────────────────────────────────────
+//  page
 export default function PerformancePage() {
   const user     = useContext(UserContext);
   const navigate = useNavigate();
@@ -334,6 +340,7 @@ export default function PerformancePage() {
   const isViewing = !!studentId; // admin/parent viewing a student
 
   const [studentName, setStudentName] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [questions,   setQuestions]   = useState<MergedQ[] | null>(null);
   const [allTests,    setAllTests]    = useState<Test[]>([]);
 
@@ -364,21 +371,34 @@ export default function PerformancePage() {
     setQuestions(null);
     setAllTests([]);
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) { setQuestions([]); return; }
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-student-performance`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-          body: JSON.stringify({ student_id: targetId }),
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) { setLoadError("Your session expired. Sign in again to view this page."); setQuestions([]); return; }
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-student-performance`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ student_id: targetId }),
+          }
+        );
+        if (!res.ok) {
+          setLoadError(res.status === 403
+            ? "You don't have access to this student's performance."
+            : "Couldn't load performance data. Please try again.");
+          setQuestions([]);
+          return;
         }
-      );
-      if (!res.ok) { setQuestions([]); return; }
-      const body = await res.json();
-      setQuestions(body.questions ?? []);
-      setAllTests((body.tests ?? []) as Test[]);
+        const body = await res.json();
+        setLoadError("");
+        setQuestions(body.questions ?? []);
+        setAllTests((body.tests ?? []) as Test[]);
+      } catch (err) {
+        console.error("Performance fetch failed:", err);
+        setLoadError("Couldn't reach the server. Check your connection and try again.");
+        setQuestions([]);
+      }
     })();
   }, [isViewing, targetId, user]);
 
@@ -421,7 +441,7 @@ export default function PerformancePage() {
     })();
   }, [isViewing, targetId]);
 
-  // ── derived ────────────────────────────────────────────────────────────────
+  //  derived
 
   // Effective time budget: based on average question count of non-practice tests.
   // Practice tests are excluded from the predicted score entirely.
@@ -442,7 +462,7 @@ export default function PerformancePage() {
 
     for (const q of questions) {
       const k = q.sub_category ?? "Uncategorized";
-      const sj = q.subject ?? "Other";
+      const sj = (q.subject ?? "other").toLowerCase();
       const t = validTime(q.time_spent);
       const cur = subMap.get(k) ?? { correct: 0, total: 0, subject: sj, times: [] };
       subMap.set(k, { correct: cur.correct + (q.is_correct ? 1 : 0), total: cur.total + 1,
@@ -469,7 +489,7 @@ export default function PerformancePage() {
       advice: buildAdvice(subcats, subjects, pred, questions.length, budgetPerQ) };
   })();
 
-  // Chart data — uses nonPracticeTests already computed above
+  // Chart data, uses nonPracticeTests already computed above
   const shsatTests = nonPracticeTests;
 
   // Compute per-test SHSAT score (200–700) from difficulty-weighted accuracy.
@@ -515,9 +535,9 @@ export default function PerformancePage() {
     : stats.pred.avgSecs <= budgetPerQ       ? "text-emerald-600"
     : stats.pred.avgSecs <= budgetPerQ * 1.3 ? "text-amber-600" : "text-rose-600";
 
-  // ── render ─────────────────────────────────────────────────────────────────
+  //  render
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex flex-col sm:flex-row h-screen bg-slate-50">
       {/* Sidebar only for students viewing their own page */}
       {!isViewing && <SideBar />}
 
@@ -548,7 +568,15 @@ export default function PerformancePage() {
           </div>
         )}
 
-        {questions !== null && questions.length === 0 && (
+        {loadError && (
+          <div className="flex-1 flex items-center justify-center text-center">
+            <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-4 py-3 max-w-sm">
+              {loadError}
+            </p>
+          </div>
+        )}
+
+        {!loadError && questions !== null && questions.length === 0 && (
           <div className="flex-1 flex items-center justify-center text-center">
             <div className="flex flex-col items-center gap-2">
               <p className="text-base font-semibold text-slate-700">No question data yet</p>
@@ -560,17 +588,18 @@ export default function PerformancePage() {
         )}
 
         {questions !== null && questions.length > 0 && stats && (
-          <div className="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-6">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 flex flex-col gap-6">
 
-            {/* ── row 1: key stats ── */}
-            <div className="grid grid-cols-4 gap-4">
+            {/*  row 1: key stats  */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               <div className="bg-linear-to-br from-blue-600 to-blue-800 rounded-xl shadow-md p-5 flex flex-col justify-between">
                 <p className="text-xs font-semibold text-blue-200 uppercase tracking-wider">Predicted SHSAT</p>
                 <div className="mt-2">
                   <p className="text-5xl font-extrabold text-white tabular-nums leading-none">
-                    {avgPredictedScore ?? "—"}
+                    {avgPredictedScore ?? "-"}
                   </p>
                   <p className="text-xs text-blue-200 mt-1">/ 700</p>
+                  <p className="text-[10px] text-blue-200 mt-1 leading-snug">Our own estimate, not an official score.</p>
                 </div>
                 {avgPredictedScore == null
                   ? <p className="text-[10px] text-blue-300 mt-3 leading-snug">Complete a mock or diagnostic test</p>
@@ -592,13 +621,13 @@ export default function PerformancePage() {
               <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Avg Time / Q</p>
                 <p className={`text-3xl font-bold tabular-nums ${avgTimeColor}`}>
-                  {stats.pred.avgSecs != null ? `${Math.round(stats.pred.avgSecs)}s` : "—"}
+                  {stats.pred.avgSecs != null ? `${Math.round(stats.pred.avgSecs)}s` : "-"}
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5">SHSAT budget: ~{Math.round(budgetPerQ)}s</p>
               </div>
             </div>
 
-            {/* ── SHSAT Score History ── */}
+            {/*  SHSAT Score History  */}
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
               <div className="mb-1">
                 <h2 className="text-sm font-semibold text-slate-800">SHSAT Score History</h2>
@@ -632,7 +661,7 @@ export default function PerformancePage() {
               )}
             </div>
 
-            {/* ── Accuracy Improvement ── */}
+            {/*  Accuracy Improvement  */}
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
               <div className="mb-1">
                 <h2 className="text-sm font-semibold text-slate-800">Accuracy Over Time</h2>
@@ -664,8 +693,8 @@ export default function PerformancePage() {
               )}
             </div>
 
-            {/* ── By Subject + Recommendations ── */}
-            <div className="grid grid-cols-3 gap-4">
+            {/*  By Subject + Recommendations  */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Subject breakdown */}
               <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">By Subject</h2>
@@ -673,13 +702,13 @@ export default function PerformancePage() {
                   {Object.entries(stats.subjects).map(([subj, v]) => (
                     <div key={subj} className="flex flex-col gap-1.5">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-slate-700">{subj}</span>
+                        <span className="text-sm font-medium text-slate-700">{subjectLabel(subj)}</span>
                         <div className="flex items-center gap-2">
                           <TimeTag secs={v.avgSecs} budget={budgetPerQ} />
                           <span className="text-sm font-bold tabular-nums text-slate-900">{v.accuracy}%</span>
                         </div>
                       </div>
-                      <Bar pct={v.accuracy} color={subj === "English" ? "bg-blue-400" : "bg-violet-400"} />
+                      <Bar pct={v.accuracy} color={subj === "english" ? "bg-blue-400" : "bg-violet-400"} />
                       <p className="text-xs text-slate-400">{v.correct} / {v.total} correct</p>
                     </div>
                   ))}
@@ -689,7 +718,7 @@ export default function PerformancePage() {
               {/* Recommendations */}
               <div className="col-span-2 bg-white rounded-xl border border-slate-100 shadow-sm p-6 flex flex-col gap-3">
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Recommendations</h2>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {stats.advice.map((a, i) => {
                     const s = ASTYLE[a.type];
                     return (
@@ -703,7 +732,7 @@ export default function PerformancePage() {
               </div>
             </div>
 
-            {/* ── Subcategory breakdown ── */}
+            {/*  Subcategory breakdown  */}
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Subcategory Breakdown</h2>
@@ -716,19 +745,19 @@ export default function PerformancePage() {
                   </span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
                 {stats.subcats.map(s => {
                   const acc = s.accuracy;
                   const barC = acc >= 80 ? "bg-emerald-400" : acc >= 60 ? "bg-blue-400" : acc >= 40 ? "bg-amber-400" : "bg-rose-400";
                   const txtC = acc >= 80 ? "text-emerald-600" : acc >= 60 ? "text-blue-600" : acc >= 40 ? "text-amber-600" : "text-rose-600";
-                  const tagC = s.subject === "English" ? "bg-blue-50 text-blue-600"
-                    : s.subject === "Math" ? "bg-violet-50 text-violet-600" : "bg-slate-100 text-slate-500";
+                  const tagC = s.subject === "english" ? "bg-blue-50 text-blue-600"
+                    : s.subject === "math" ? "bg-violet-50 text-violet-600" : "bg-slate-100 text-slate-500";
                   return (
                     <div key={s.name} className="flex flex-col gap-1">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${tagC}`}>
-                            {s.subject?.slice(0, 3) ?? "—"}
+                            {subjectLabel(s.subject).slice(0, 3)}
                           </span>
                           <span className="text-xs font-medium text-slate-700 truncate">{fmtSub(s.name)}</span>
                         </div>

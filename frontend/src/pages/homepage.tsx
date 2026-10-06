@@ -8,6 +8,7 @@ import { UserContext } from "../components/userContext";
 import { Test } from "../components/types";
 import { fetchIncorrectReport, fetchFullIncorrectReport, exportIncorrectPDF } from "../utils/exportIncorrectPDF";
 import { fmtSubEN } from "../utils/translations";
+import { MOCK_TEST_QUESTIONS } from "../utils/testConfig";
 
 interface AssignmentWithTest {
   id: string;
@@ -53,7 +54,7 @@ function HomePage() {
   const [durationHours, setDurationHours] = useState("0");
   const [durationMinutes, setDurationMinutes] = useState("0");
   const user = useContext(UserContext);
-  const [numQuestions, setNumQuestions] = useState("114");
+  const [numQuestions, setNumQuestions] = useState(String(MOCK_TEST_QUESTIONS));
   const [startError, setStartError] = useState("");
   const [numPracticeQuestions, setNumPracticeQuestions] = useState(false);
   const [showDiagnosticPrompt, setShowDiagnosticPrompt] = useState(false);
@@ -69,6 +70,10 @@ function HomePage() {
   const [studentGroups, setStudentGroups] = useState<StudentGroupData[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [pdfReportLoading, setPdfReportLoading] = useState<string | null>(null);
+  const [testsError, setTestsError] = useState("");
+  // Set while a test row is being created, so a second click cannot insert a duplicate.
+  const [startingTest, setStartingTest] = useState(false);
+  const [startingAssignment, setStartingAssignment] = useState<string | null>(null);
 
   async function getTests() {
     const { data, error } = await supabase
@@ -76,7 +81,13 @@ function HomePage() {
       .select("*")
       .eq("user_id", user!.id)
       .order("created_at", { ascending: false });
-    if (error) { console.error("Tests fetch failed:", error); return; }
+    if (error) {
+      console.error("Tests fetch failed:", error);
+      setTestsError("Couldn't load your tests. Check your connection and refresh.");
+      setRecentTests([]);
+      return;
+    }
+    setTestsError("");
     if (data) {
       setRecentTests(
         data.map((test) => ({
@@ -111,18 +122,31 @@ function HomePage() {
   }
 
   async function createDiagnosticTest() {
+    if (startingTest) return;
+    setStartingTest(true);
     const { data: countData, error: countError } = await supabase.rpc("count_diagnostic_questions");
-    if (countError || countData === null) { console.error("Failed to count diagnostic questions:", countError); return; }
+    if (countError || countData === null) {
+      console.error("Failed to count diagnostic questions:", countError);
+      setStartError("Couldn't start the diagnostic test. Please try again.");
+      setStartingTest(false);
+      return;
+    }
     const { data, error } = await supabase
       .from("tests")
       .insert([{ user_id: user!.id, test_name: "Diagnostic Test", score: null, duration: 180, total_questions: countData }])
       .select()
       .single();
-    if (error) { console.error("Failed to create diagnostic test:", error); return; }
+    if (error) {
+      console.error("Failed to create diagnostic test:", error);
+      setStartError("Couldn't start the diagnostic test. Please try again.");
+      setStartingTest(false);
+      return;
+    }
     navigate(`/mock/${data.id}`);
   }
 
   async function startMockTest() {
+    if (startingTest) return;
     setStartError("");
     if (numPracticeQuestions) {
       const n = parseInt(numQuestions, 10);
@@ -139,7 +163,8 @@ function HomePage() {
         return;
       }
     }
-    const parsedQ = numPracticeQuestions ? parseInt(numQuestions, 10) : 100;
+    setStartingTest(true);
+    const parsedQ = numPracticeQuestions ? parseInt(numQuestions, 10) : MOCK_TEST_QUESTIONS;
     const totalMinutes = isTimed ? (parseInt(durationHours, 10) || 0) * 60 + (parseInt(durationMinutes, 10) || 0) : 0;
     const testName = numPracticeQuestions ? "Practice" : "Mock Test";
     const configuration = numPracticeQuestions && selectedTopics.length > 0
@@ -150,7 +175,12 @@ function HomePage() {
       .insert([{ user_id: user!.id, test_name: testName, score: null, duration: totalMinutes, total_questions: parsedQ, configuration }])
       .select()
       .single();
-    if (error) { console.error("Insert failed:", error.message); return; }
+    if (error) {
+      console.error("Insert failed:", error.message);
+      setStartError("Couldn't start the test. Please try again.");
+      setStartingTest(false);
+      return;
+    }
     navigate(`/mock/${data.id}`);
   }
 
@@ -250,6 +280,8 @@ function HomePage() {
   }
 
   async function startAssignment(a: AssignmentWithTest) {
+    if (startingAssignment) return;
+    setStartingAssignment(a.id);
     if (a.test_id) {
       if (a.test_type === "practice" && a.categories && a.categories.length > 0) {
         const patchConfig: Record<string, unknown> = { assignment_id: a.id, practice_topics: a.categories };
@@ -260,7 +292,7 @@ function HomePage() {
       return;
     }
     const testName = a.test_type === "mock" ? "Mock Test" : "Practice";
-    const totalQ = a.num_questions ?? 114;
+    const totalQ = a.num_questions ?? MOCK_TEST_QUESTIONS;
     const totalMin = a.duration_minutes ?? 0;
     const config: Record<string, unknown> = { assignment_id: a.id };
     if (a.test_type === "practice" && a.categories && a.categories.length > 0) {
@@ -273,7 +305,7 @@ function HomePage() {
       .from("tests")
       .insert({ user_id: user!.id, test_name: testName, score: null, duration: totalMin, total_questions: totalQ, configuration: config })
       .select().single();
-    if (error || !testData) return;
+    if (error || !testData) { setStartingAssignment(null); return; }
     await supabase.from("assignments").update({ test_id: testData.id }).eq("id", a.id);
     navigate(`/mock/${testData.id}`);
   }
@@ -318,7 +350,6 @@ function HomePage() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const completedTests = recentTests?.filter((t) => t.score !== null) ?? [];
   const diagTest = recentTests?.find((t) => t.test_name === "Diagnostic Test" && t.score !== null);
-  const lastTest = recentTests?.[0];
 
   const filteredTests = recentTests
     ? recentTests
@@ -335,7 +366,7 @@ function HomePage() {
     : null;
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex flex-col sm:flex-row h-screen bg-slate-50">
       {/* Diagnostic overlay */}
       {showDiagnosticPrompt && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -348,7 +379,7 @@ function HomePage() {
             </div>
             <ul className="flex flex-col gap-2">
               {[
-                "114 questions — English first, then Math",
+                "English first, then Math",
                 "Fixed 3-hour time limit",
                 "Cannot leave the test once started",
                 "All features unlock after completion",
@@ -375,10 +406,11 @@ function HomePage() {
             </div>
             <button
               type="button"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition-colors"
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white py-3 rounded-xl font-semibold transition-colors"
+              disabled={startingTest}
               onClick={createDiagnosticTest}
             >
-              Start Diagnostic Test
+              {startingTest ? "Starting…" : "Start Diagnostic Test"}
             </button>
           </div>
         </div>
@@ -401,11 +433,11 @@ function HomePage() {
               value={numPracticeQuestions ? "practice" : "mock"}
               className="border border-slate-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
               onChange={(e) => {
-                if (e.target.value === "mock") { setNumQuestions("100"); setNumPracticeQuestions(false); setStartError(""); }
+                if (e.target.value === "mock") { setNumQuestions(String(MOCK_TEST_QUESTIONS)); setNumPracticeQuestions(false); setStartError(""); }
                 else { setNumPracticeQuestions(true); setNumQuestions("20"); setStartError(""); }
               }}
             >
-              <option value="mock">Mock Test (100 questions)</option>
+              <option value="mock">Mock Test ({MOCK_TEST_QUESTIONS} questions)</option>
               <option value="practice">Practice</option>
             </select>
           </div>
@@ -426,7 +458,7 @@ function HomePage() {
             </div>
           )}
 
-          {/* Topic filter — practice mode only */}
+          {/* Topic filter, practice mode only */}
           {numPracticeQuestions && Object.keys(topicsBySubject).length > 0 && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
@@ -539,10 +571,11 @@ function HomePage() {
         )}
         <button
           type="button"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-semibold text-base transition-colors"
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-semibold text-base transition-colors"
+          disabled={startingTest}
           onClick={startMockTest}
         >
-          Start Test
+          {startingTest ? "Starting…" : "Start Test"}
         </button>
       </MockTextPopUp>
 
@@ -562,7 +595,7 @@ function HomePage() {
           <button
             type="button"
             className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm transition-colors shrink-0"
-            onClick={() => { setStartError(""); setNumPracticeQuestions(false); setNumQuestions("114"); setSelectedTopics([]); setMockTestPopUp(true); }}
+            onClick={() => { setStartError(""); setNumPracticeQuestions(false); setNumQuestions(String(MOCK_TEST_QUESTIONS)); setSelectedTopics([]); setMockTestPopUp(true); }}
           >
             + New Test/Practice
           </button>
@@ -574,7 +607,7 @@ function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Tests Taken</p>
-              <p className="text-3xl font-bold text-slate-900">{recentTests?.length ?? "—"}</p>
+              <p className="text-3xl font-bold text-slate-900">{recentTests?.length ?? "-"}</p>
             </div>
             <button
               type="button"
@@ -681,11 +714,11 @@ function HomePage() {
                                   ) : myA ? (
                                     <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">Assigned</span>
                                   ) : (
-                                    <span className="text-xs text-slate-300">—</span>
+                                    <span className="text-xs text-slate-300">-</span>
                                   )}
                                 </div>
                                 <div className="flex flex-wrap gap-x-3 text-xs text-slate-500">
-                                  <span>{ga.test_type === "mock" ? "114 questions" : `${ga.num_questions ?? "?"} questions`}</span>
+                                  <span>{`${ga.num_questions ?? MOCK_TEST_QUESTIONS} questions`}</span>
                                   {ga.duration_minutes ? <span>· {Math.floor(ga.duration_minutes / 60) > 0 ? `${Math.floor(ga.duration_minutes / 60)}h ` : ""}{ga.duration_minutes % 60 > 0 ? `${ga.duration_minutes % 60}m` : ""} limit</span> : null}
                                   {ga.due_date && <span className={isDue && !isCompleted ? "text-rose-500 font-medium" : "text-slate-400"}>· Due {new Date(ga.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>}
                                 </div>
@@ -694,8 +727,9 @@ function HomePage() {
                               </div>
                               {myA && !isCompleted && (
                                 <button type="button" onClick={() => startAssignment(myA)}
-                                  className={`shrink-0 px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isInProgress ? "bg-amber-500 hover:bg-amber-400 text-zinc-950" : "bg-blue-600 hover:bg-blue-700 text-white"}`}>
-                                  {isInProgress ? "Continue" : "Start"}
+                                  disabled={startingAssignment !== null}
+                                  className={`shrink-0 px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${isInProgress ? "bg-amber-500 hover:bg-amber-400 text-zinc-950" : "bg-blue-600 hover:bg-blue-700 text-white"}`}>
+                                  {startingAssignment === myA.id ? "Starting…" : isInProgress ? "Continue" : "Start"}
                                 </button>
                               )}
                               {isCompleted && myA?.test_id && (
@@ -779,7 +813,7 @@ function HomePage() {
                                   )}
                                 </div>
                                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-slate-600">
-                                  <span>{a.test_type === "mock" ? "114 questions" : `${a.num_questions ?? "?"} questions`}</span>
+                                  <span>{`${a.num_questions ?? MOCK_TEST_QUESTIONS} questions`}</span>
                                   {a.duration_minutes ? (
                                     <span className="text-slate-400">· {Math.floor(a.duration_minutes / 60) > 0 ? `${Math.floor(a.duration_minutes / 60)}h ` : ""}{a.duration_minutes % 60 > 0 ? `${a.duration_minutes % 60}m` : ""} limit</span>
                                   ) : null}
@@ -800,9 +834,10 @@ function HomePage() {
                               <button
                                 type="button"
                                 onClick={() => startAssignment(a)}
-                                className={`shrink-0 px-5 py-2 rounded-lg text-sm font-semibold transition-colors ${isInProgress ? "bg-amber-500 hover:bg-amber-400 text-zinc-950" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+                                disabled={startingAssignment !== null}
+                                className={`shrink-0 px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${isInProgress ? "bg-amber-500 hover:bg-amber-400 text-zinc-950" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
                               >
-                                {isInProgress ? "Continue" : "Start"}
+                                {startingAssignment === a.id ? "Starting…" : isInProgress ? "Continue" : "Start"}
                               </button>
                             </div>
                           );
@@ -835,7 +870,7 @@ function HomePage() {
                                   )}
                                 </div>
                                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-slate-500">
-                                  <span>{a.test_type === "mock" ? "114 questions" : `${a.num_questions ?? "?"} questions`}</span>
+                                  <span>{`${a.num_questions ?? MOCK_TEST_QUESTIONS} questions`}</span>
                                   {a.difficulties && a.difficulties.length > 0 && (
                                     <span className="text-slate-400">· {a.difficulties.join(", ")}</span>
                                   )}
@@ -918,6 +953,11 @@ function HomePage() {
                 </select>
               </div>
             </div>
+            {testsError && (
+              <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">
+                {testsError}
+              </p>
+            )}
             <TestTable
               tests={filteredTests}
               onReset={resetTest}

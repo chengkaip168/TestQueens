@@ -36,7 +36,7 @@ export default function DragFillSingle({
   const after  = blankIdx >= 0 ? text.slice(blankIdx + 7) : "";
   const tokens = options.filter(Boolean);
 
-  // ── Interaction handlers ─────────────────────────────────────────────────────
+  //  Interaction handlers
 
   function place(letter: string) {
     setPlaced(letter);
@@ -70,7 +70,7 @@ export default function DragFillSingle({
     if (LETTERS.includes(letter as (typeof LETTERS)[number])) place(letter);
   }
 
-  // ── Derived display values ───────────────────────────────────────────────────
+  //  Derived display values
 
   const displayLetter  = isReadOnly ? (previousAnswer?.trim().toUpperCase() || null) : placed;
   const correctLetter  = answer?.trim().toUpperCase() || null;
@@ -83,7 +83,7 @@ export default function DragFillSingle({
   const displayText = letterToText(displayLetter);
   const correctText = letterToText(correctLetter);
 
-  // ── Blank slot style ─────────────────────────────────────────────────────────
+  //  Blank slot style
 
   let blankCls: string;
   if (isReadOnly) {
@@ -105,7 +105,7 @@ export default function DragFillSingle({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ── Sentence with blank ─────────────────────────────────────────────── */}
+      {/*  Sentence with blank  */}
       <div className="text-sm sm:text-base text-slate-800 leading-[2.4rem]">
         <span>{parseFormattedText(before, "dfs-b")}</span>
 
@@ -130,7 +130,7 @@ export default function DragFillSingle({
         <span>{parseFormattedText(after, "dfs-a")}</span>
       </div>
 
-      {/* ── Correct answer strip (read-only wrong) ──────────────────────────── */}
+      {/*  Correct answer strip (read-only wrong)  */}
       {isReadOnly && reviewCorrect === false && correctText && (
         <div className="flex items-center gap-2 text-sm">
           <span className="text-slate-400 font-medium shrink-0">Correct answer:</span>
@@ -140,7 +140,7 @@ export default function DragFillSingle({
         </div>
       )}
 
-      {/* ── Token bank ──────────────────────────────────────────────────────── */}
+      {/*  Token bank  */}
       <div className="flex flex-col gap-2">
         {!isReadOnly && (
           <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider select-none">

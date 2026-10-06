@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ── Brand palette ────────────────────────────────────────────────────────
+/*  Brand palette
    The TestQueens logo is navy #1b2a44 + gold #c7a96a.
 
    Rather than rewrite 646 utility classes across the app, the `blue` and
@@ -28,7 +28,7 @@
   --color-blue-900: #0d1420;
   --color-blue-950: #080d15;
 
-  /* ── Corner radius ──────────────────────────────────────────────────
+  /*  Corner radius
      Every step is 59.5% of the Tailwind default (-30%, then a further -15%),
      applied here so all 369 rounded-* utilities tighten at once.
      `rounded-full` is deliberately excluded: it is the pill/circle token
@@ -56,7 +56,7 @@
   --color-amber-950: #261e12;
 }
 
-/* Buttons sitewide use Almendra — the one deliberate serif on the site.
+/* Buttons sitewide use Almendra, the one deliberate serif on the site.
    Applied to the element, so any button with its own explicit font-family
    (e.g. the login page's link-styled buttons) keeps that font by specificity.
    Falls back to Albert Sans, never a system serif. */
@@ -64,7 +64,7 @@ button {
   font-family: 'Almendra', 'Albert Sans', sans-serif;
 }
 
-/* Text wordmark. Only used where the lockup image cannot go — the navy
+/* Text wordmark. Only used where the lockup image cannot go, the navy
    wordmark would be invisible on the dark signup / reset panels.
    No small-caps: Albert Sans has no true small-cap set, so browsers
    synthesised them by scaling capitals, which read as broken lettering. */

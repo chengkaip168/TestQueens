@@ -75,7 +75,7 @@ export default function DragFillMultiple({
     chosenAnswer(p.every(x => x !== null) ? (p as string[]).join(",") : "");
   }
 
-  // ── Interaction handlers ─────────────────────────────────────────────────────
+  //  Interaction handlers
 
   function handleTokenClick(letter: string) {
     if (isReadOnly) return;
@@ -126,7 +126,7 @@ export default function DragFillMultiple({
     emit(next);
   }
 
-  // ── Derived values for review ────────────────────────────────────────────────
+  //  Derived values for review
 
   const studentLetters = isReadOnly
     ? lettersFromAnswer(previousAnswer, blankCount)
@@ -147,7 +147,7 @@ export default function DragFillMultiple({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ── Text with inline blank slots ───────────────────────────────────── */}
+      {/*  Text with inline blank slots  */}
       <div className="text-sm sm:text-base text-slate-800 leading-[2.6rem]">
         {segments.map((seg, si) => {
           if (seg.type === "text")
@@ -204,7 +204,7 @@ export default function DragFillMultiple({
         })}
       </div>
 
-      {/* ── Correct answers panel (read-only, any wrong) ──────────────────── */}
+      {/*  Correct answers panel (read-only, any wrong)  */}
       {isReadOnly && anyWrong && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3 flex flex-col gap-2">
           <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Correct answers</p>
@@ -220,7 +220,7 @@ export default function DragFillMultiple({
                       : "bg-white border-emerald-300 text-emerald-700"}`}
                 >
                   <span className="text-zinc-400 font-bold">{i + 1}.</span>
-                  <span>{correctText ?? "—"}</span>
+                  <span>{correctText ?? "-"}</span>
                   {isRight && (
                     <svg className="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -233,7 +233,7 @@ export default function DragFillMultiple({
         </div>
       )}
 
-      {/* ── Token bank ──────────────────────────────────────────────────────── */}
+      {/*  Token bank  */}
       <div className="flex flex-col gap-2">
         {!isReadOnly && (
           <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider select-none">

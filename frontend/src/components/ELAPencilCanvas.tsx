@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import type { PencilStroke, PencilPoint } from "../hooks/useELATools";
 
 interface Props {
@@ -23,70 +23,79 @@ function pointsToPath(pts: PencilPoint[]): string {
 export default function ELAPencilCanvas({ active, strokes, onAddStroke }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [currentPoints, setCurrentPoints] = useState<PencilPoint[]>([]);
+  const [height, setHeight] = useState<number | null>(null);
   const drawing = useRef(false);
 
-  const getSVGPoint = useCallback((e: React.MouseEvent): PencilPoint => {
-    const svg = svgRef.current!;
-    const rect = svg.getBoundingClientRect();
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
+  // The canvas sits inside a scrollable panel. An absolutely positioned child only
+  // spans the visible height there, so without this strokes drawn after scrolling
+  // land outside the box and get clipped. Track the full scroll height instead.
+  useEffect(() => {
+    const parent = svgRef.current?.parentElement;
+    if (!parent) return;
+    const measure = () => setHeight(parent.scrollHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(parent);
+    for (const child of Array.from(parent.children)) observer.observe(child);
+    return () => observer.disconnect();
+  }, [strokes.length]);
+
+  const getPoint = useCallback((e: React.PointerEvent): PencilPoint => {
+    const rect = svgRef.current!.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }, []);
 
-  function handleMouseDown(e: React.MouseEvent) {
-    if (!active || e.button !== 0) return;
-    drawing.current = true;
-    setCurrentPoints([getSVGPoint(e)]);
-  }
-
-  function handleMouseMove(e: React.MouseEvent) {
-    if (!drawing.current || !active) return;
-    setCurrentPoints(prev => [...prev, getSVGPoint(e)]);
-  }
-
-  function handleMouseUp(e: React.MouseEvent) {
-    if (!drawing.current) return;
-    drawing.current = false;
-    setCurrentPoints(prev => {
-      if (prev.length > 1) {
-        onAddStroke({
-          id: `s${Date.now()}${Math.random().toString(36).slice(2)}`,
-          points: [...prev, getSVGPoint(e)],
-        });
-      }
-      return [];
-    });
-  }
-
-  function handleMouseLeave() {
-    if (drawing.current) {
-      drawing.current = false;
-      setCurrentPoints(prev => {
-        if (prev.length > 1) {
-          onAddStroke({
-            id: `s${Date.now()}${Math.random().toString(36).slice(2)}`,
-            points: prev,
-          });
-        }
-        return [];
+  function commit(points: PencilPoint[]) {
+    if (points.length > 1) {
+      onAddStroke({
+        id: `s${Date.now()}${Math.random().toString(36).slice(2)}`,
+        points,
       });
     }
+  }
+
+  function handlePointerDown(e: React.PointerEvent) {
+    if (!active || (e.pointerType === "mouse" && e.button !== 0)) return;
+    drawing.current = true;
+    // Capture so a stroke that leaves the canvas still ends cleanly.
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setCurrentPoints([getPoint(e)]);
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    if (!drawing.current || !active) return;
+    const pt = getPoint(e);
+    setCurrentPoints(prev => [...prev, pt]);
+  }
+
+  function handlePointerUp(e: React.PointerEvent) {
+    if (!drawing.current) return;
+    drawing.current = false;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    const last = getPoint(e);
+    setCurrentPoints(prev => {
+      commit([...prev, last]);
+      return [];
+    });
   }
 
   return (
     <svg
       ref={svgRef}
-      className="absolute inset-0 w-full h-full rounded-2xl overflow-hidden"
+      className="absolute inset-x-0 top-0 w-full"
       style={{
+        height: height ?? "100%",
         pointerEvents: active ? "all" : "none",
         cursor: active ? "crosshair" : "default",
+        touchAction: active ? "none" : "auto",
         zIndex: 20,
       }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
       {/* Committed strokes */}
       {strokes.map(stroke => (

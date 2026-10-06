@@ -96,7 +96,7 @@ export default function AdminPage() {
 
   return (
     <div className="flex h-screen bg-white text-zinc-800 overflow-hidden">
-      {/* ── Sidebar ── */}
+      {/*  Sidebar  */}
       <aside className="w-10 lg:w-56 shrink-0 flex flex-col bg-white border-r border-zinc-200">
         {/* Logo */}
         <div className="px-2 lg:px-5 py-5 border-b border-zinc-200">
@@ -136,7 +136,7 @@ export default function AdminPage() {
         </div>
       </aside>
 
-      {/* ── Content ── */}
+      {/*  Content  */}
       <main className="flex-1 overflow-hidden flex flex-col">
         {tab === "students"  && <AdminStudentsPanel />}
         {tab === "questions" && (

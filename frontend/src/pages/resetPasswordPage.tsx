@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabase-client";
 import { LogoLockup, LogoMark } from "../assets/logo";
@@ -11,12 +11,22 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSessionReady(!!session);
+    let settled = false;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) { settled = true; setSessionReady(true); }
     });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) { settled = true; setSessionReady(true); }
+    });
+    // Only call the link invalid once the hash has had time to be exchanged.
+    const timer = setTimeout(() => { if (!settled) setSessionReady(false); }, 3000);
+    return () => { subscription.unsubscribe(); clearTimeout(timer); };
   }, []);
+
+  useEffect(() => () => { if (redirectTimer.current) clearTimeout(redirectTimer.current); }, []);
 
   async function handleReset(e: React.FormEvent) {
     e.preventDefault();
@@ -29,7 +39,7 @@ export default function ResetPasswordPage() {
     if (updateError) { setError(updateError.message); return; }
     setDone(true);
     // Navigate to the correct dashboard based on the user's role
-    setTimeout(async () => {
+    redirectTimer.current = setTimeout(async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
@@ -40,7 +50,7 @@ export default function ResetPasswordPage() {
     }, 2000);
   }
 
-  const LeftPanel = () => (
+  const leftPanel = (
     <div className="hidden md:flex md:w-2/5 bg-linear-to-br from-blue-700 to-blue-900 flex-col items-center justify-center p-12 relative overflow-hidden">
       <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full bg-white/5" />
       <div className="absolute -bottom-32 -right-16 w-96 h-96 rounded-full bg-white/5" />
@@ -65,11 +75,11 @@ export default function ResetPasswordPage() {
     );
   }
 
-  // No session — link was expired or page visited directly
+  // No session, link was expired or page visited directly
   if (!sessionReady) {
     return (
       <div className="flex h-screen w-full">
-        <LeftPanel />
+        {leftPanel}
         <div className="flex flex-1 items-center justify-center bg-white p-8">
           <div className="w-full max-w-sm flex flex-col items-center gap-5 text-center">
             <div className="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center">
@@ -99,7 +109,7 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="flex h-screen w-full">
-      <LeftPanel />
+      {leftPanel}
 
       <div className="flex flex-1 items-center justify-center bg-white p-8">
         <div className="w-full max-w-sm flex flex-col gap-6">

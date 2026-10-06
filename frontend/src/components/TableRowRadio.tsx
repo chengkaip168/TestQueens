@@ -1,5 +1,5 @@
 // Table-row radio question: each row in the table has exactly one radio selection
-// across the column headers. Answer format: "A,B,A" — one capital letter per row.
+// across the column headers. Answer format: "A,B,A", one capital letter per row.
 
 import { useState } from "react";
 
@@ -31,11 +31,10 @@ export default function TableRowRadio({
   previousAnswer = "",
   correctAnswer = "",
 }: Props) {
+  // Seeded from previousAnswer in all modes: it is "" for a fresh question and the
+  // stored answer when revisiting one, so editable review keeps the student's picks.
   const [selections, setSelections] = useState<(Letter | null)[]>(() =>
-    // In read-only, parse the submitted answer. In live, all null.
-    isReadOnly
-      ? parseSelections(previousAnswer, rows.length)
-      : rows.map(() => null)
+    parseSelections(previousAnswer, rows.length)
   );
 
   const correctSels = parseSelections(correctAnswer, rows.length);
@@ -127,7 +126,7 @@ export default function TableRowRadio({
                         radioRing = "border-2 border-rose-400 bg-rose-400";
                         radioDot  = <span className="block w-2.25 h-2.25 rounded-full bg-white mx-auto" />;
                       } else if (isCorrect && !isSelected) {
-                        // Correct answer the student missed — dashed green ring
+                        // Correct answer the student missed, dashed green ring
                         cellBg   = "bg-emerald-50/50";
                         radioRing = "border-2 border-dashed border-emerald-400 bg-white";
                         radioDot  = <span className="block w-1.75 h-1.75 rounded-full bg-emerald-400 mx-auto" />;
@@ -175,7 +174,7 @@ export default function TableRowRadio({
       {/* Progress hint (live mode) */}
       {!isReadOnly && remaining > 0 && (
         <p className="text-xs text-slate-400 pl-0.5">
-          Select one option per row — <strong className="text-slate-500">{remaining}</strong> row{remaining !== 1 ? "s" : ""} remaining.
+          Select one option per row, <strong className="text-slate-500">{remaining}</strong> row{remaining !== 1 ? "s" : ""} remaining.
         </p>
       )}
 

@@ -9,11 +9,13 @@ import logoLockup from "../assets/logo-lockup.png";
 async function waitForImages(root: HTMLElement): Promise<void> {
   await Promise.all(
     Array.from(root.querySelectorAll("img")).map(img =>
-      img.complete && img.naturalWidth > 0
+      // An image that already finished, successfully or not, will never fire
+      // another load event, so waiting on one would hang the export forever.
+      img.complete
         ? Promise.resolve()
         : new Promise<void>(resolve => {
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
+            img.addEventListener("load", () => resolve(), { once: true });
+            img.addEventListener("error", () => resolve(), { once: true });
           })
     )
   );
@@ -173,7 +175,7 @@ function buildHTML(data: PDFExportData): string {
       zh ? `數學（第${start}–${end}題）` : `Math (Q${start}&ndash;Q${end})`,
   };
 
-  // ── SHSAT block ────────────────────────────────────────────────────────────
+  //  SHSAT block
   let shsatBlock = "";
   if (data.shsatScore) {
     const s = data.shsatScore;
@@ -226,7 +228,7 @@ function buildHTML(data: PDFExportData): string {
       </div>`;
   }
 
-  // ── AI analysis block ──────────────────────────────────────────────────────
+  //  AI analysis block
   let aiBlock = "";
   if (data.aiAnalysis) {
     const a = data.aiAnalysis;
@@ -251,7 +253,7 @@ function buildHTML(data: PDFExportData): string {
       </div>`;
   }
 
-  // ── Section bars (only show subjects that have questions) ─────────────────
+  //  Section bars (only show subjects that have questions)
   const sectionBarsHTML = [
     data.englishTotal > 0 ? `
       <div>
@@ -275,7 +277,7 @@ function buildHTML(data: PDFExportData): string {
       </div>` : "",
   ].filter(Boolean).join("");
 
-  // ── Question grid header (conditional English/Math labels) ─────────────────
+  //  Question grid header (conditional English/Math labels)
   const hasEnglish = data.englishTotal > 0;
   const hasMath    = data.mathTotal > 0;
   const qGridHeader = hasEnglish && hasMath
@@ -286,7 +288,7 @@ function buildHTML(data: PDFExportData): string {
       ? `<span style="font-size:11px;font-weight:700;color:#1b2a44;text-transform:uppercase;letter-spacing:0.05em;">${L.englishQ(data.totalQuestions)}</span>`
       : `<span style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.05em;">${L.mathQ(1, data.totalQuestions)}</span>`;
 
-  // ── Question grid ──────────────────────────────────────────────────────────
+  //  Question grid
   const correct   = data.questions.filter(q => q.isCorrect === true).length;
   const incorrect = data.questions.filter(q => q.isCorrect === false).length;
   const skipped   = data.totalQuestions - data.questions.length;

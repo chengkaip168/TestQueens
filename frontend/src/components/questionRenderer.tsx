@@ -101,7 +101,7 @@ export default function QuestionRenderer({
         <SHSATGrapher
           onAnswerChange={chosenAnswer}
           isReadOnly={isReadOnly}
-          previousAnswer={isReadOnly ? previousAnswer : undefined}
+          previousAnswer={previousAnswer}
           correctAnswer={isReadOnly ? answer : undefined}
         />
       );
@@ -133,7 +133,7 @@ export default function QuestionRenderer({
           chosenAnswer={chosenAnswer}
           isReadOnly={isReadOnly}
           previousAnswer={previousAnswer}
-          answer={answer}
+          answer={isReadOnly ? answer : undefined}
         />
       );
     case "number_line_click":
@@ -144,7 +144,7 @@ export default function QuestionRenderer({
           step={nlStep}
           onAnswerChange={chosenAnswer}
           isReadOnly={isReadOnly}
-          previousAnswer={isReadOnly ? previousAnswer : undefined}
+          previousAnswer={previousAnswer}
           correctAnswer={isReadOnly ? answer : undefined}
         />
       );
@@ -155,7 +155,7 @@ export default function QuestionRenderer({
           rows={trRows}
           chosenAnswer={chosenAnswer}
           isReadOnly={isReadOnly}
-          previousAnswer={isReadOnly ? previousAnswer : undefined}
+          previousAnswer={previousAnswer}
           correctAnswer={isReadOnly ? answer : undefined}
         />
       );
