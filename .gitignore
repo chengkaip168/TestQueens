@@ -19,3 +19,4 @@ dist-ssr
 *.sw?
 .idea
 Chantutor.code-workspace
+env
