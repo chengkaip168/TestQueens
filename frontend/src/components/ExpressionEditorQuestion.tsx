@@ -136,7 +136,7 @@ export default function ExpressionEditorQuestion({
                   type="button"
                   title={`Insert variable ${v}`}
                   onMouseDown={e => { e.preventDefault(); press(v); }}
-                  className="h-9 min-w-[2.25rem] px-2 rounded-lg border border-indigo-200 bg-white text-indigo-700 text-sm font-bold italic hover:bg-indigo-50 hover:border-indigo-400 active:scale-95 transition-all shadow-sm"
+                  className="h-9 min-w-[2.25rem] px-2 rounded-lg border border-indigo-200 bg-white text-indigo-700 text-sm font-bold italic hover:bg-indigo-50 hover:border-indigo-400 active:scale-95 transition-[color,background-color,border-color,box-shadow,transform] shadow-sm"
                 >
                   {v}
                 </button>
@@ -153,7 +153,7 @@ export default function ExpressionEditorQuestion({
                     key={key.ins}
                     type="button"
                     onMouseDown={e => { e.preventDefault(); press(key.ins); }}
-                    className="h-10 rounded-lg border border-slate-200 bg-white text-slate-800 text-sm font-semibold hover:bg-blue-50 hover:border-blue-300 active:scale-95 active:bg-blue-100 transition-all shadow-sm"
+                    className="h-10 rounded-lg border border-slate-200 bg-white text-slate-800 text-sm font-semibold hover:bg-blue-50 hover:border-blue-300 active:scale-95 active:bg-blue-100 transition-[color,background-color,border-color,box-shadow,transform] shadow-sm"
                   >
                     {key.label}
                   </button>
@@ -170,7 +170,7 @@ export default function ExpressionEditorQuestion({
                 type="button"
                 title={key.title}
                 onMouseDown={e => { e.preventDefault(); press(key.ins); }}
-                className="h-10 rounded-lg border border-amber-200 bg-white text-slate-700 text-sm font-semibold hover:bg-amber-50 hover:border-amber-400 active:scale-95 active:bg-amber-100 transition-all shadow-sm"
+                className="h-10 rounded-lg border border-amber-200 bg-white text-slate-700 text-sm font-semibold hover:bg-amber-50 hover:border-amber-400 active:scale-95 active:bg-amber-100 transition-[color,background-color,border-color,box-shadow,transform] shadow-sm"
               >
                 {key.label}
               </button>
@@ -179,7 +179,7 @@ export default function ExpressionEditorQuestion({
               type="button"
               title="Backspace"
               onMouseDown={e => { e.preventDefault(); del(); }}
-              className="h-10 rounded-lg border border-slate-200 bg-white text-slate-600 text-lg hover:bg-rose-50 hover:border-rose-300 active:scale-95 transition-all shadow-sm"
+              className="h-10 rounded-lg border border-slate-200 bg-white text-slate-600 text-lg hover:bg-rose-50 hover:border-rose-300 active:scale-95 transition-[color,background-color,border-color,box-shadow,transform] shadow-sm"
             >
               ⌫
             </button>
@@ -187,7 +187,7 @@ export default function ExpressionEditorQuestion({
               type="button"
               title="Clear all"
               onMouseDown={e => { e.preventDefault(); clr(); }}
-              className="h-10 rounded-lg border border-slate-200 bg-white text-rose-500 text-xs font-bold tracking-wide hover:bg-rose-50 hover:border-rose-300 active:scale-95 transition-all shadow-sm"
+              className="h-10 rounded-lg border border-slate-200 bg-white text-rose-500 text-xs font-bold tracking-wide hover:bg-rose-50 hover:border-rose-300 active:scale-95 transition-[color,background-color,border-color,box-shadow,transform] shadow-sm"
             >
               CLR
             </button>

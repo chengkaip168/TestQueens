@@ -38,15 +38,15 @@ export default function PassageSentenceSelect({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-slate-500">Click on a sentence to select it as your answer.</p>
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1.5">
+      <p className="text-xs text-slate-500">Choose the sentence that answers the question.</p>
+      <div role="radiogroup" aria-label="Choose a sentence" className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1.5">
         {sentences.map((sentence, idx) => {
           const num = idx + 1;
           const isSelected = selected === num;
           const isCorrectSentence = correctNum !== null && num === correctNum;
 
           let rowCls =
-            "flex gap-3 items-start rounded-lg border-2 px-3 py-2.5 transition-all select-none ";
+            "flex gap-3 items-start rounded-lg border-2 px-3 py-2.5 transition-colors select-none ";
 
           if (isReadOnly) {
             if (isSelected && isCorrectSentence)
@@ -64,7 +64,18 @@ export default function PassageSentenceSelect({
           }
 
           return (
-            <div key={idx} className={rowCls} onClick={() => handleClick(num)}>
+            <div
+              key={idx}
+              className={rowCls}
+              role="radio"
+              aria-checked={isSelected}
+              aria-label={`Sentence ${num}`}
+              tabIndex={isReadOnly ? -1 : 0}
+              onClick={() => handleClick(num)}
+              onKeyDown={e => {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(num); }
+              }}
+            >
               <span className="shrink-0 text-xs text-slate-400 font-mono mt-0.5 w-5 text-right">
                 {num}.
               </span>

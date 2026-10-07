@@ -616,7 +616,7 @@ export default function QuestionDetailModal({
                         </span>
                         <div className="flex-1 text-sm text-slate-700 leading-relaxed">
                           {choiceImages[letter] ? (
-                            <img src={choiceImages[letter]} alt={`Choice ${letter}`} className="max-h-16 h-auto" />
+                            <img src={choiceImages[letter]} alt={`Choice ${letter}`} loading="lazy" decoding="async" className="max-h-16 h-auto" />
                           ) : (
                             label ? parseFormattedText(stripChoicePrefix(label)) : "-"
                           )}

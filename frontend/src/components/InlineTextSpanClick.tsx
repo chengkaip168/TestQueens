@@ -63,7 +63,7 @@ export default function InlineTextSpanClick({
       <p className="text-xs text-slate-500">
         Click on an underlined word or phrase to select it.
       </p>
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-[2] text-slate-800">
+      <div role="radiogroup" aria-label="Choose the underlined span" className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-[2] text-slate-800">
         {segments.map((seg, i) => {
           if (seg.type === "text") {
             return <span key={i}>{parseFormattedText(seg.content)}</span>;
@@ -74,7 +74,7 @@ export default function InlineTextSpanClick({
           const isCorrect = correctLetter === label;
 
           let spanCls =
-            "relative inline underline decoration-2 underline-offset-2 rounded-sm px-0.5 transition-all ";
+            "relative inline underline decoration-2 underline-offset-2 rounded-sm px-0.5 transition-colors ";
 
           if (isReadOnly) {
             if (isSelected && isCorrect)
@@ -103,7 +103,17 @@ export default function InlineTextSpanClick({
 
           return (
             <span key={i} className="inline-flex items-baseline gap-px">
-              <span className={spanCls} onClick={() => handleClick(label)}>
+              <span
+                className={spanCls}
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={`Span ${label}`}
+                tabIndex={isReadOnly ? -1 : 0}
+                onClick={() => handleClick(label)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(label); }
+                }}
+              >
                 {parseFormattedText(seg.content)}
               </span>
               <sup className={`text-[9px] font-bold select-none ${labelCls}`}>{label}</sup>

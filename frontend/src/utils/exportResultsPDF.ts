@@ -62,7 +62,7 @@ export interface PDFExportData {
     labelColor: "green" | "amber" | "red";
     subcategories: PDFSubcategory[];
   };
-  aiAnalysis?: {
+  studyNotes?: {
     strengths: string[];
     improvements: string[];
     recommendations: string[];
@@ -160,7 +160,7 @@ function buildHTML(data: PDFExportData): string {
     incorrect:            zh ? "錯誤"            : "incorrect",
     skipped:              zh ? "未作答"           : "skipped",
     scoreCircleLabel:     zh ? "得分"            : "score",
-    aiCoach:              zh ? "AI 教練"         : "AI Coach",
+    studyNotes:           zh ? "學習建議"        : "Study Notes",
     strengths:            zh ? "優勢"            : "Strengths",
     improvements:         zh ? "待提升方向"       : "Areas to Improve",
     recommendations:      zh ? "學習建議"         : "Study Recommendations",
@@ -228,10 +228,10 @@ function buildHTML(data: PDFExportData): string {
       </div>`;
   }
 
-  //  AI analysis block
-  let aiBlock = "";
-  if (data.aiAnalysis) {
-    const a = data.aiAnalysis;
+  //  Study notes block
+  let notesBlock = "";
+  if (data.studyNotes) {
+    const a = data.studyNotes;
     const card = (title: string, items: string[], border: string, bg: string, text: string) =>
       `<div style="border-left:4px solid ${border};background:${bg};border-radius:0 4.76px 4.76px 0;padding:12px 14px;margin-bottom:10px;">
         <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:${text};margin:0 0 8px 0;">${title}</p>
@@ -239,13 +239,13 @@ function buildHTML(data: PDFExportData): string {
           ${items.map(item => `<li style="font-size:12px;color:${text};display:flex;gap:8px;"><span style="flex-shrink:0;">›</span><span>${item}</span></li>`).join("")}
         </ul>
       </div>`;
-    aiBlock = `
+    notesBlock = `
       <div style="border:1px solid #e5e7eb;border-radius:7.14px;padding:20px;margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
           <div style="width:28px;height:28px;border-radius:50%;background:#1b2a44;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <span style="color:white;font-size:14px;line-height:1;">&#9889;</span>
           </div>
-          <span style="font-size:14px;font-weight:700;color:#111827;">${L.aiCoach}</span>
+          <span style="font-size:14px;font-weight:700;color:#111827;">${L.studyNotes}</span>
         </div>
         ${card(L.strengths,       a.strengths,       "#34d399", "#f0fdf4", "#065f46")}
         ${card(L.improvements,    a.improvements,    "#fbbf24", "#fffbeb", "#92400e")}
@@ -345,7 +345,7 @@ function buildHTML(data: PDFExportData): string {
     </div>
 
     ${shsatBlock}
-    ${aiBlock}
+    ${notesBlock}
 
     <div style="border:1px solid #e5e7eb;border-radius:7.14px;padding:20px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">

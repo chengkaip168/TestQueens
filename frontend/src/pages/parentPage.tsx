@@ -50,7 +50,7 @@ interface TestResults {
   questions: QuestionResult[];
 }
 
-interface AIAnalysis { strengths: string[]; improvements: string[]; recommendations: string[]; }
+interface StudyNotes { strengths: string[]; improvements: string[]; recommendations: string[]; }
 
 interface AssignmentRecord {
   id: string;
@@ -280,7 +280,7 @@ function ResultsModal({
 
   const engGood  = engCorrect >= englishQs.length * 0.7;
   const mathGood = mathCorrect >= mathQs.length * 0.7;
-  const analysis: AIAnalysis = {
+  const analysis: StudyNotes = {
     strengths:       t.fallbackStrengths(engGood, mathGood, questions.length, totalQ),
     improvements:    t.fallbackImprovements(engGood, mathGood),
     recommendations: t.fallbackRecs(),
@@ -311,7 +311,7 @@ function ResultsModal({
         labelColor: shsatLabel.color,
         subcategories: shsat.subcategories,
       } : undefined,
-      aiAnalysis: analysis ?? undefined,
+      studyNotes: analysis ?? undefined,
       questions: questions.map(q => ({
         orderIndex: q.order_index,
         isCorrect: q.is_correct,
@@ -846,7 +846,7 @@ function ParentPage() {
                 <button
                   type="button"
                   onClick={() => selectStudent(s)}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all border ${
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-colors border ${
                     selectedStudent?.id === s.id
                       ? "bg-blue-50 border-blue-200 shadow-sm"
                       : "border-transparent hover:bg-slate-50 hover:border-slate-200"

@@ -189,7 +189,7 @@ export default function DragFillMultiple({
               onDragOver={isReadOnly ? undefined : e => { e.preventDefault(); setDragOverBlank(bIdx); }}
               onDragLeave={isReadOnly ? undefined : () => setDragOverBlank(d => d === bIdx ? null : d)}
               onDrop={isReadOnly ? undefined : e => handleDrop(e, bIdx)}
-              className={`inline-flex items-center gap-1 mx-1 px-2.5 py-0.5 min-w-[90px] rounded-xl border-2 text-sm font-semibold align-middle transition-all duration-150
+              className={`inline-flex items-center gap-1 mx-1 px-2.5 py-0.5 min-w-[90px] rounded-xl border-2 text-sm font-semibold align-middle transition-colors duration-150
                 ${!isReadOnly ? "cursor-pointer hover:shadow" : ""}
                 ${blankCls}`}
             >
@@ -277,7 +277,7 @@ export default function DragFillMultiple({
                   e.dataTransfer.effectAllowed = "move";
                 }}
                 onClick={() => handleTokenClick(letter)}
-                className={`px-4 py-2 rounded-2xl border-2 text-sm font-semibold select-none transition-all duration-150
+                className={`px-4 py-2 rounded-2xl border-2 text-sm font-semibold select-none transition-colors duration-150
                   ${isReadOnly
                     ? `${roClass} cursor-default`
                     : isPlaced

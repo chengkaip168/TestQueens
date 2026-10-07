@@ -521,7 +521,7 @@ function HomePage() {
               aria-label="Toggle timed mode"
               aria-pressed={isTimed}
               onClick={() => { setIsTimed(t => !t); setStartError(""); }}
-              className={`relative inline-flex h-7 w-13 items-center rounded-full transition-colors focus:outline-none ${isTimed ? "bg-blue-600" : "bg-slate-200"}`}
+              className={`relative inline-flex h-7 w-13 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/40 ${isTimed ? "bg-blue-600" : "bg-slate-200"}`}
             >
               <span
                 className={`inline-block h-6 w-6 rounded-full bg-white shadow transition-transform ${isTimed ? "translate-x-6.5" : "translate-x-0.5"}`}

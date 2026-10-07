@@ -137,7 +137,7 @@ export default function DragToCategorize({
                 draggable={!isReadOnly && !isPlaced}
                 onDragStart={e => { e.dataTransfer.setData("text/plain", String(idx)); e.dataTransfer.effectAllowed = "move"; }}
                 onClick={() => handleItemClick(idx)}
-                className={`px-3 py-1 rounded-xl border-2 text-sm font-semibold select-none transition-all duration-150
+                className={`px-3 py-1 rounded-xl border-2 text-sm font-semibold select-none transition-colors duration-150
                   ${isReadOnly
                     ? isPlaced
                       ? displayPlacements[idx] === correctPlacements[idx]
@@ -177,7 +177,7 @@ export default function DragToCategorize({
               onDragOver={isReadOnly ? undefined : e => { e.preventDefault(); setDragOverCol(colIdx); }}
               onDragLeave={isReadOnly ? undefined : () => setDragOverCol(d => d === colIdx ? null : d)}
               onDrop={isReadOnly ? undefined : e => handleDrop(e, colIdx)}
-              className={`flex flex-col rounded-xl border-2 overflow-hidden transition-all duration-150 min-h-[120px]
+              className={`flex flex-col rounded-xl border-2 overflow-hidden transition-colors duration-150 min-h-[120px]
                 ${!isReadOnly && hasSelected ? "cursor-pointer" : ""}
                 ${isDragOver
                   ? "border-amber-400 bg-amber-50 shadow-md scale-[1.01]"
@@ -202,7 +202,7 @@ export default function DragToCategorize({
                     <div
                       key={idx}
                       onClick={e => { e.stopPropagation(); handleItemClick(idx); }}
-                      className={`px-2 py-0.5 rounded-lg border text-xs font-semibold text-center transition-all
+                      className={`px-2 py-0.5 rounded-lg border text-xs font-semibold text-center transition-colors
                         ${isReadOnly
                           ? isCorrect
                             ? "bg-emerald-100 border-emerald-400 text-emerald-800 cursor-default"

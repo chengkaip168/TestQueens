@@ -80,7 +80,7 @@ export default function ELANotepad({ open, notes, onNotesChange, onClose }: Prop
         value={notes}
         onChange={e => onNotesChange(e.target.value)}
         placeholder="Type your notes here…"
-        className="flex-1 resize-none bg-amber-50 text-sm text-slate-800 px-3 py-2.5 placeholder-amber-300 focus:outline-none min-h-[180px]"
+        className="flex-1 resize-none bg-amber-50 text-sm text-slate-800 px-3 py-2.5 placeholder-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500/40 min-h-[180px]"
       />
     </div>
   );

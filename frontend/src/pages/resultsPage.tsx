@@ -28,7 +28,7 @@ interface SelectedQuestion {
   questionNumber: number;
 }
 
-interface AIAnalysis {
+interface StudyNotes {
   strengths: string[];
   improvements: string[];
   recommendations: string[];
@@ -102,7 +102,7 @@ function SectionBar({ label, correct, total, colorClass }: { label: string; corr
         <span className="text-slate-400">{correct} / {total} &middot; {pct}%</span>
       </div>
       <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all duration-700 ease-out ${colorClass}`} style={{ width: `${pct}%` }} />
+        <div className={`h-full rounded-full transition-colors duration-700 ease-out ${colorClass}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -228,7 +228,7 @@ function SHSATScoreCard({ score, lang }: { score: SHSATScore; lang: Lang }) {
                           </div>
                           <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full transition-all duration-500 ${group.accent}`}
+                              className={`h-full rounded-full transition-colors duration-500 ${group.accent}`}
                               style={{ width: subBarWidth(sub.score) }}
                             />
                           </div>
@@ -475,7 +475,7 @@ function ResultsPage() {
       : `Increase practice frequency on your weaker section, three 20-minute focused sessions per week outperform one long session`);
   }
 
-  const analysis: AIAnalysis = { strengths, improvements, recommendations };
+  const analysis: StudyNotes = { strengths, improvements, recommendations };
 
   async function handleMissedQReport() {
     if (!test || !testID) return;
@@ -516,7 +516,7 @@ function ResultsPage() {
         labelColor: sl.color,
         subcategories: shsatScore.subcategories,
       } : undefined,
-      aiAnalysis: analysis ?? undefined,
+      studyNotes: analysis ?? undefined,
       questions: questions.map(q => ({
         orderIndex: q.order_index,
         isCorrect: q.is_correct,
@@ -613,7 +613,7 @@ function ResultsPage() {
         {/* SHSAT Score Estimate, not shown for practice sessions */}
         {shsatScore && test.test_name !== "Practice" && <SHSATScoreCard score={shsatScore} lang={lang} />}
 
-        {/* AI Coach */}
+        {/* Study notes */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0">

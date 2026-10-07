@@ -154,7 +154,7 @@ export default function TableRowRadio({
                           aria-label={`Row ${ri + 1}: ${colHeaders[ci]}`}
                           aria-pressed={isSelected}
                           className={[
-                            "w-5 h-5 rounded-full flex items-center justify-center mx-auto transition-all",
+                            "w-5 h-5 rounded-full flex items-center justify-center mx-auto transition-colors",
                             radioRing,
                             isReadOnly ? "cursor-default" : "cursor-pointer hover:scale-110",
                           ].join(" ")}

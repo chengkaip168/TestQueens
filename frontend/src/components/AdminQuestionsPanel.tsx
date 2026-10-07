@@ -241,13 +241,13 @@ function TypeBadge({ type, source }: { type: string; source?: string }) {
     <div className="flex items-center gap-1.5">
       <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${cls}`}>{label}</span>
       {source === "ai" && (
-        <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-600">AI</span>
+        <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-600">Gen</span>
       )}
     </div>
   );
 }
 
-//  Generate AI Questions modal
+//  Generate Questions modal
 
 interface GenerateModalProps {
   onClose: () => void;
@@ -374,8 +374,8 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
         {/* Header */}
         <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between shrink-0">
           <div>
-            <h3 className="text-lg font-bold text-zinc-900">Generate AI Questions</h3>
-            <p className="text-sm text-zinc-400 mt-0.5">Uses Claude to write SHSAT-style math and ELA questions</p>
+            <h3 className="text-lg font-bold text-zinc-900">Generate Questions</h3>
+            <p className="text-sm text-zinc-400 mt-0.5">Drafts SHSAT-style math and ELA questions for review</p>
           </div>
           <button type="button" onClick={onClose}
             className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors text-base">
@@ -412,7 +412,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
               </div>
               {result.pending > 0 && (
                 <p className="text-xs text-zinc-400 text-center">
-                  Questions marked "Pending" were flagged by the AI as possibly incorrect. Review them in the question bank.
+                  Questions marked "Pending" were flagged as possibly incorrect. Review them in the question bank.
                 </p>
               )}
               {result.duplicates_skipped > 0 && (
@@ -438,7 +438,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
                       return (
                         <button key={opt.id} type="button"
                           onClick={() => setGenTypes(toggle(genTypes, opt.id))}
-                          className={`py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                          className={`py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
                             active
                               ? "bg-amber-500 border-amber-400 text-zinc-950"
                               : "bg-zinc-50 border-zinc-200 text-zinc-500 hover:border-amber-500/40"
@@ -456,7 +456,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
                       return (
                         <button key={opt.id} type="button"
                           onClick={() => setGenTypes(toggle(genTypes, opt.id))}
-                          className={`py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                          className={`py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
                             active
                               ? "bg-blue-500 border-blue-400 text-white"
                               : "bg-zinc-50 border-zinc-200 text-zinc-500 hover:border-blue-500/40"
@@ -478,7 +478,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
                     {([4, 5, 6] as (4 | 5 | 6)[]).map(n => (
                       <button key={n} type="button"
                         onClick={() => setGenChoiceCount(n)}
-                        className={`py-2 rounded-xl border text-sm font-bold transition-all ${
+                        className={`py-2 rounded-xl border text-sm font-bold transition-colors ${
                           genChoiceCount === n
                             ? "bg-amber-500 border-amber-400 text-zinc-950"
                             : "bg-zinc-50 border-zinc-200 text-zinc-500 hover:border-amber-500/40"
@@ -502,7 +502,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
                     return (
                       <button key={cat.value} type="button"
                         onClick={() => setGenCategories(toggle(genCategories, cat.value))}
-                        className={`py-2 px-1.5 rounded-xl border text-xs font-semibold text-center leading-tight transition-all ${
+                        className={`py-2 px-1.5 rounded-xl border text-xs font-semibold text-center leading-tight transition-colors ${
                           active
                             ? "bg-amber-500 border-amber-400 text-zinc-950"
                             : "bg-zinc-50 border-zinc-200 text-zinc-500 hover:border-amber-500/40"
@@ -521,7 +521,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
                     return (
                       <button key={cat.value} type="button"
                         onClick={() => setGenCategories(toggle(genCategories, cat.value))}
-                        className={`py-2 px-1.5 rounded-xl border text-xs font-semibold text-center leading-tight transition-all ${
+                        className={`py-2 px-1.5 rounded-xl border text-xs font-semibold text-center leading-tight transition-colors ${
                           active
                             ? "bg-blue-500 border-blue-400 text-white"
                             : "bg-zinc-50 border-zinc-200 text-zinc-500 hover:border-blue-500/40"
@@ -541,7 +541,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
                   {[5, 10, 15, 20].map(n => (
                     <button key={n} type="button"
                       onClick={() => setGenCount(n)}
-                      className={`py-2 rounded-xl border text-sm font-bold transition-all ${
+                      className={`py-2 rounded-xl border text-sm font-bold transition-colors ${
                         genCount === n
                           ? "bg-amber-500 border-amber-400 text-zinc-950"
                           : "bg-zinc-50 border-zinc-200 text-zinc-500 hover:border-amber-500/40"
@@ -562,7 +562,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
                     return (
                       <button key={d} type="button"
                         onClick={() => setGenDifficulties(toggle(genDifficulties, d))}
-                        className={`py-2 rounded-xl border text-sm font-bold capitalize transition-all ${
+                        className={`py-2 rounded-xl border text-sm font-bold capitalize transition-colors ${
                           active
                             ? "bg-amber-500 border-amber-400 text-zinc-950"
                             : "bg-zinc-50 border-zinc-200 text-zinc-500 hover:border-amber-500/40"
@@ -577,7 +577,7 @@ function GenerateModal({ onClose, onSuccess }: GenerateModalProps) {
 
               {/* Cost estimate */}
               <p className="text-xs text-zinc-400 bg-zinc-50 border border-zinc-100 rounded-lg px-3 py-2">
-                Estimated cost: ~${estimatedCost} USD using Claude Opus
+                Estimated cost: ~${estimatedCost} USD
                 {genTypes.length > 1 && ` (${genTypes.length} type passes)`}
               </p>
 
@@ -726,7 +726,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
 
   // Which questions have media. The source of truth is dictionary_of_media -
   // the same table the player reads at render time, NOT all_questions.media_refs,
-  // which is empty for the extracted sample tests and null for AI questions.
+  // which is empty for bank questions and null for generated ones.
   // Presence of a row is all that counts: a broken or 404ing URL still counts
   // as "has media", which is what was asked for.
   useEffect(() => {
@@ -814,7 +814,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
         const aNum = a.uid.match(/^ai_Q(\d+)$/);
         const bNum = b.uid.match(/^ai_Q(\d+)$/);
         if (aNum && bNum) return parseInt(aNum[1]) - parseInt(bNum[1]);
-        if (aNum) return 1;   // AI questions after bank questions
+        if (aNum) return 1;   // generated questions after bank questions
         if (bNum) return -1;
         return a.uid.localeCompare(b.uid);
       });
@@ -1182,7 +1182,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
       }
     } else {
       // Edit mode: topic tables are best-effort, all_questions is already saved above.
-      // AI-generated questions were never inserted into topic tables, so errors here are expected.
+      // Generated questions were never inserted into topic tables, so errors here are expected.
       const subCategoryChanged = originalSubCategory && originalSubCategory !== form.sub_category;
       if (subCategoryChanged) {
         await supabase.from(originalSubCategory!).delete().eq("uid", form.uid!);
@@ -1409,11 +1409,11 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
           placeholder="Search by UID or question text…"
           value={searchInput}
           onChange={e => handleSearchChange(e.target.value)}
-          className="flex-1 min-w-0 bg-zinc-50 border border-zinc-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base text-zinc-700 placeholder-zinc-400 focus:outline-none focus:border-amber-500/40 transition-colors"
+          className="flex-1 min-w-0 bg-zinc-50 border border-zinc-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base text-zinc-700 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40 transition-colors"
         />
 
         <select title="Filter by subject" value={filterSubject} onChange={e => { setFilterSubject(e.target.value); setPage(0); }}
-          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none transition-colors ${filterSubject ? "border-amber-400 text-amber-700 bg-amber-50 focus:border-amber-500" : "border-zinc-200 text-zinc-600 focus:border-amber-500/40"}`}>
+          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-amber-500/40 transition-colors ${filterSubject ? "border-amber-400 text-amber-700 bg-amber-50 focus:border-amber-500" : "border-zinc-200 text-zinc-600 focus:border-amber-500/40"}`}>
           <option value="">All Subjects</option>
           <option value="english">English</option>
           <option value="math">Math</option>
@@ -1430,7 +1430,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
             if (mathOnlyTypes.includes(t) && filterSubject === "english") setFilterSubject("");
             // drag_fill types can be both, no auto-correct needed
           }}
-          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none transition-colors ${filterType ? "border-amber-400 text-amber-700 bg-amber-50 focus:border-amber-500" : "border-zinc-200 text-zinc-600 focus:border-amber-500/40"}`}>
+          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-amber-500/40 transition-colors ${filterType ? "border-amber-400 text-amber-700 bg-amber-50 focus:border-amber-500" : "border-zinc-200 text-zinc-600 focus:border-amber-500/40"}`}>
           <option value="">All Types</option>
           <option value="mcq">MCQ</option>
           <option value="grid-in">Grid-in</option>
@@ -1449,15 +1449,15 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
         </select>
 
         <select title="Filter by source" value={filterSource} onChange={e => { setFilterSource(e.target.value); setPage(0); }}
-          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none transition-colors ${filterSource ? "border-amber-400 text-amber-700 bg-amber-50 focus:border-amber-500" : "border-zinc-200 text-zinc-600 focus:border-amber-500/40"}`}>
+          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-amber-500/40 transition-colors ${filterSource ? "border-amber-400 text-amber-700 bg-amber-50 focus:border-amber-500" : "border-zinc-200 text-zinc-600 focus:border-amber-500/40"}`}>
           <option value="">All Sources</option>
           <option value="bank">Question Bank</option>
-          <option value="ai">AI Generated</option>
+          <option value="ai">Generated</option>
         </select>
 
         <div className="relative">
           <select title="Filter by status" value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(0); }}
-            className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none transition-colors ${filterStatus ? "border-amber-400 text-amber-700 bg-amber-50 focus:border-amber-500" : "border-zinc-200 text-zinc-600 focus:border-amber-500/40"}`}>
+            className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-amber-500/40 transition-colors ${filterStatus ? "border-amber-400 text-amber-700 bg-amber-50 focus:border-amber-500" : "border-zinc-200 text-zinc-600 focus:border-amber-500/40"}`}>
             <option value="">All Statuses</option>
             <option value="approved">Approved</option>
             <option value="pending">Pending Review</option>
@@ -1472,20 +1472,20 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
 
         <select title="Filter by media" value={filterMedia} disabled={!mediaLoaded}
           onChange={e => { setFilterMedia(e.target.value as "" | "yes" | "no"); setPage(0); }}
-          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none transition-colors disabled:opacity-50 ${filterMedia ? "border-amber-500/60 text-zinc-900" : "border-zinc-300 text-zinc-600"}`}>
+          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-amber-500/40 transition-colors disabled:opacity-50 ${filterMedia ? "border-amber-500/60 text-zinc-900" : "border-zinc-300 text-zinc-600"}`}>
           <option value="">All Media</option>
           <option value="yes">Has media</option>
           <option value="no">No media</option>
         </select>
 
         <select title="Filter by test packet" value={filterPacket} onChange={e => { setFilterPacket(e.target.value); setPage(0); }}
-          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none transition-colors ${filterPacket ? "border-amber-500/60 text-zinc-900" : "border-zinc-300 text-zinc-600"}`}>
+          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-amber-500/40 transition-colors ${filterPacket ? "border-amber-500/60 text-zinc-900" : "border-zinc-300 text-zinc-600"}`}>
           <option value="">All Packets</option>
           {packets.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
 
         <select title="Filter by topic" value={filterCategory} onChange={e => { setFilterCategory(e.target.value); setPage(0); }}
-          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none transition-colors ${filterCategory ? "border-amber-400 text-amber-700 bg-amber-50 focus:border-amber-500" : "border-zinc-200 text-zinc-600 focus:border-amber-500/40"}`}>
+          className={`bg-zinc-50 border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-amber-500/40 transition-colors ${filterCategory ? "border-amber-400 text-amber-700 bg-amber-50 focus:border-amber-500" : "border-zinc-200 text-zinc-600 focus:border-amber-500/40"}`}>
           <option value="">All Topics</option>
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
@@ -1506,8 +1506,8 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            <span className="hidden sm:inline">Generate AI</span>
-            <span className="sm:hidden">AI</span>
+            <span className="hidden sm:inline">Generate</span>
+            <span className="sm:hidden">Gen</span>
           </button>
           <button type="button" onClick={openAdd}
             className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors whitespace-nowrap">
@@ -1644,7 +1644,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
         </div>
       </div>
 
-      {/*  Generate AI Questions Modal  */}
+      {/*  Generate Questions Modal  */}
       {showGenerate && (
         <GenerateModal
           onClose={() => setShowGenerate(false)}
@@ -2003,7 +2003,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                       const selected = form.answer === letter;
                       return (
                         <button key={letter} type="button" onClick={() => setField("answer", letter)} title={choiceText || `Choice ${letter}`}
-                          className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border text-base font-bold transition-all ${
+                          className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border text-base font-bold transition-colors ${
                             selected ? "bg-amber-500 border-amber-400 text-zinc-950" : "bg-zinc-50 border-zinc-200 text-zinc-400 hover:border-amber-500/40 hover:text-zinc-700"
                           }`}
                         >
@@ -2115,7 +2115,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                     <div className="grid grid-cols-4 gap-2">
                       {(["A", "B", "C", "D"] as const).map(letter => (
                         <button key={letter} type="button" onClick={() => setField("answer", letter)}
-                          className={`px-3 py-2.5 rounded-xl border text-base font-bold transition-all ${
+                          className={`px-3 py-2.5 rounded-xl border text-base font-bold transition-colors ${
                             form.answer === letter ? "bg-amber-500 border-amber-400 text-zinc-950" : "bg-zinc-50 border-zinc-200 text-zinc-400 hover:border-amber-500/40 hover:text-zinc-700"
                           }`}
                         >
@@ -2150,13 +2150,13 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                               <span className="text-sm font-bold uppercase tracking-widest text-zinc-500">Media ID</span>
                               <input type="text" value={item.mediaId} onChange={e => updateMediaItem(idx, { mediaId: e.target.value })} title="Media ID"
                                 placeholder={`${form.uid ?? "UID"}_${String.fromCharCode(65 + idx)}`}
-                                className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-1.5 text-sm font-mono text-zinc-700 placeholder-zinc-400 focus:outline-none focus:border-amber-500/60 transition-colors"
+                                className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-1.5 text-sm font-mono text-zinc-700 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/60 transition-colors"
                               />
                             </div>
                             <div className="flex flex-col gap-1 w-36 shrink-0">
                               <span className="text-sm font-bold uppercase tracking-widest text-zinc-500">Type</span>
                               <select value={item.media_type} onChange={e => updateMediaItem(idx, { media_type: e.target.value as MediaType })} title="Media type"
-                                className="w-full bg-white border border-zinc-300 rounded-lg px-2 py-1.5 text-sm text-zinc-700 focus:outline-none focus:border-amber-500/60 transition-colors">
+                                className="w-full bg-white border border-zinc-300 rounded-lg px-2 py-1.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/60 transition-colors">
                                 {(Object.keys(MEDIA_TYPE_LABELS) as MediaType[]).map(t => (
                                   <option key={t} value={t}>{MEDIA_TYPE_LABELS[t]}</option>
                                 ))}
@@ -2189,7 +2189,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                             <div className="flex flex-col gap-1">
                               <textarea value={item.passageText} onChange={e => updateMediaItem(idx, { passageText: e.target.value, isExisting: false })}
                                 placeholder="Paste or type the full passage text…" rows={5}
-                                className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:outline-none focus:border-amber-500/60 transition-colors resize-y"
+                                className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/60 transition-colors resize-y"
                               />
                             </div>
                           )}
@@ -2225,7 +2225,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                   </div>
                 </div>
                 {/* Live feedback badge, fades in when admin answers */}
-                <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full transition-all duration-200 ${
+                <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full transition-colors duration-200 ${
                   previewResult === true
                     ? "bg-emerald-100 text-emerald-700 opacity-100 scale-100"
                     : previewResult === false
@@ -2513,7 +2513,7 @@ export default function AdminQuestionsPanel({ initialEditUid, initialReportId, o
                     <button
                       type="button"
                       onClick={() => { setPreviewAnswer(""); setPreviewResetKey(k => k + 1); }}
-                      className={`shrink-0 text-[11px] font-semibold transition-all duration-150 ${
+                      className={`shrink-0 text-[11px] font-semibold transition-colors duration-150 ${
                         previewAnswer
                           ? "text-slate-500 hover:text-slate-800"
                           : "text-slate-300 pointer-events-none"

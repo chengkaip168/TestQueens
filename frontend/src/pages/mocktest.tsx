@@ -1651,7 +1651,7 @@ function MockTest() {
       {/* Pause banner. Lives inside the sticky header rather than over it, so it pushes
           the title, counter and timer down instead of covering them. */}
       {(!isOnline || !isDbReachable) && (
-        <div className="flex items-center justify-center gap-2.5 bg-amber-500 text-white text-sm font-semibold py-3 px-4">
+        <div role="status" aria-live="polite" className="flex items-center justify-center gap-2.5 bg-amber-500 text-white text-sm font-semibold py-3 px-4">
           <svg className="w-4 h-4 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18.364 5.636a9 9 0 010 12.728M15.536 8.464a5 5 0 010 7.072M4.929 4.929l14.142 14.142" />
           </svg>
@@ -1776,7 +1776,7 @@ function MockTest() {
           Visible whenever answers are queued and not yet confirmed by the DB.
           Disappears automatically once all answers have been saved. */}
       {pendingCount > 0 && (
-        <div className="fixed bottom-6 left-6 z-20 flex items-center gap-2 bg-amber-50 border border-amber-300 shadow-md rounded-full px-3.5 py-2 text-xs font-medium text-amber-800">
+        <div role="status" aria-live="polite" className="fixed bottom-6 left-6 z-20 flex items-center gap-2 bg-amber-50 border border-amber-300 shadow-md rounded-full px-3.5 py-2 text-xs font-medium text-amber-800">
           <svg className="w-3.5 h-3.5 animate-spin text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -1790,7 +1790,7 @@ function MockTest() {
         <button
           type="button"
           onClick={() => { setReportError(false); setShowReportModal(true); }}
-          className="fixed bottom-6 right-6 z-20 flex items-center gap-1.5 bg-white border border-slate-200 shadow-md rounded-full px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-amber-600 hover:border-amber-300 hover:shadow-lg transition-all"
+          className="fixed bottom-6 right-6 z-20 flex items-center gap-1.5 bg-white border border-slate-200 shadow-md rounded-full px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-amber-600 hover:border-amber-300 hover:shadow-lg transition-[color,background-color,border-color,box-shadow]"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-9.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
@@ -2016,12 +2016,12 @@ function MockTest() {
               {/* Navigation row, back left, submit right */}
               <div className="flex flex-col gap-2 pt-1">
                 {nullSubmission && (
-                  <p className="text-xs sm:text-sm text-rose-600 font-medium animate-bounce text-center">
+                  <p role="alert" className="text-xs sm:text-sm text-rose-600 font-medium animate-bounce text-center">
                     Select an answer before continuing.
                   </p>
                 )}
                 {saveError && (
-                  <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5">
+                  <div role="alert" className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5">
                     <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                     </svg>

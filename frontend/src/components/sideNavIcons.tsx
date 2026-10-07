@@ -20,7 +20,7 @@ export default function SideNavIcons({
       // name of its own or it reads as nothing at all.
       aria-label={label}
       aria-current={active ? "page" : undefined}
-      className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left border-l-2 ${
+      className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left border-l-2 ${
         active
           ? "bg-blue-50 text-blue-700 border-blue-600"
           : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent"

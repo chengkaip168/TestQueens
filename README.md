@@ -123,30 +123,28 @@ to stand up a second environment.
 
 ## Importing questions
 
-`scripts/` turns source PDFs into database rows. Run in order:
+`scripts/` converts source PDFs into database rows. Run in order:
 
-1. `extract_tests.py` renders each PDF page to PNG and uses the Claude vision API to pull out the
-   question text, choices, type, and answer. The content is rasterized inside the PDFs, so text
-   parsing is not an option. Writes CSVs to `scripts/output/`.
+1. `extract_tests.py` renders each page to PNG, pulls out question text, choices, type, and
+   answer, and writes CSVs to `scripts/output/`.
 2. `import_to_supabase.py` loads those CSVs into `all_questions` with `status = 'pending'`.
-3. `set_difficulty.py` rates each question easy, medium, or hard and patches the rows.
-4. `verify_answers.py` checks stored answers against the answer key and prints SQL `UPDATE`
-   statements for mismatches.
+3. `set_difficulty.py` rates each question easy, medium, or hard.
+4. `verify_answers.py` checks stored answers against the key and prints SQL `UPDATE` statements
+   for mismatches.
 
 Imported questions arrive as `pending`. Review them in **Admin → Questions** and approve them
 before students see them.
 
-These scripts read credentials from the environment, never from a file:
+Credentials come from the environment, never from a file:
 
-| Variable                    | Used by                                      |
-| --------------------------- | -------------------------------------------- |
-| `ANTHROPIC_API_KEY`         | `extract_tests.py`, `set_difficulty.py`      |
-| `SUPABASE_URL`              | `import_to_supabase.py`, `set_difficulty.py` |
+| Variable | Used by |
+|---|---|
+| `ANTHROPIC_API_KEY` | `extract_tests.py`, `set_difficulty.py` |
+| `SUPABASE_URL` | `import_to_supabase.py`, `set_difficulty.py` |
 | `SUPABASE_SERVICE_ROLE_KEY` | `import_to_supabase.py`, `set_difficulty.py` |
-| `SUPABASE_SERVICE_KEY`      | `verify_answers.py`                          |
+| `SUPABASE_SERVICE_KEY` | `verify_answers.py` |
 
-The service-role key goes by two names: `verify_answers.py` reads `SUPABASE_SERVICE_KEY`, the
-others read `SUPABASE_SERVICE_ROLE_KEY`. Same key. Worth unifying.
+The service-role key goes by two names across the scripts. Same key. Worth unifying.
 
 In PowerShell, quote the value so the dots in the JWT are not read as operators:
 

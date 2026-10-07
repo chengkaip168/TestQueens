@@ -69,7 +69,7 @@ export default function ELAToolbar({ tools, questionUid }: Props) {
             type="button"
             title={btn.title}
             onClick={() => handleToolClick(btn.id)}
-            className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest transition-all select-none ${
+            className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest transition-colors select-none ${
               active
                 ? "bg-amber-500 text-zinc-950 shadow-sm"
                 : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
@@ -91,7 +91,7 @@ export default function ELAToolbar({ tools, questionUid }: Props) {
         type="button"
         title="Notepad: take notes for this section"
         onClick={toggleNotes}
-        className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest transition-all select-none ${
+        className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest transition-colors select-none ${
           notesOpen
             ? "bg-sky-500 text-white shadow-sm"
             : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
@@ -113,7 +113,7 @@ export default function ELAToolbar({ tools, questionUid }: Props) {
             title="Undo last stroke"
             disabled={!pencilState.strokes.length}
             onClick={() => undoStroke(questionUid)}
-            className="flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 transition-all"
+            className="flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
@@ -125,7 +125,7 @@ export default function ELAToolbar({ tools, questionUid }: Props) {
             title="Redo last stroke"
             disabled={!pencilState.undone.length}
             onClick={() => redoStroke(questionUid)}
-            className="flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 transition-all"
+            className="flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10H11a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
@@ -137,7 +137,7 @@ export default function ELAToolbar({ tools, questionUid }: Props) {
             title="Clear all pencil marks on this question"
             disabled={!pencilState.strokes.length}
             onClick={() => clearStrokes(questionUid)}
-            className="flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest text-rose-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-30 transition-all"
+            className="flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest text-rose-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-30 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -155,7 +155,7 @@ export default function ELAToolbar({ tools, questionUid }: Props) {
             type="button"
             title="Clear all highlights on this question"
             onClick={() => { clearHighlights(passageKey); clearHighlights(questionKey); }}
-            className="flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-all"
+            className="flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

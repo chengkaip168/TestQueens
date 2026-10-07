@@ -558,7 +558,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={filterMonth} onChange={e => setFilterMonth(e.target.value)} title="Filter by month"
-            className="px-2 py-1 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-700 focus:outline-none focus:border-amber-500/60"
+            className="px-2 py-1 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/60"
           >
             <option value="all">All months</option>
             {monthOptions.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
@@ -566,7 +566,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
 
           <select
             value={filterTestType} onChange={e => setFilterTestType(e.target.value)} title="Filter by test type"
-            className="px-2 py-1 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-700 focus:outline-none focus:border-amber-500/60"
+            className="px-2 py-1 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/60"
           >
             <option value="all">All test types</option>
             {testTypeOptions.map(t => <option key={t} value={t}>{t}</option>)}
@@ -574,7 +574,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
 
           <select
             value={filterPacket} onChange={e => setFilterPacket(e.target.value)} title="Filter by test packet"
-            className="px-2 py-1 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-700 focus:outline-none focus:border-amber-500/60"
+            className="px-2 py-1 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/60"
           >
             <option value="all">All packets</option>
             {packetOptions.map(p => <option key={p} value={p}>{p}</option>)}
@@ -582,7 +582,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
 
           <select
             value={filterReason} onChange={e => setFilterReason(e.target.value)} title="Filter by reason"
-            className="px-2 py-1 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-700 focus:outline-none focus:border-amber-500/60"
+            className="px-2 py-1 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/60"
           >
             <option value="all">All reasons</option>
             {reasonOptions.map(r => <option key={r} value={r}>{REASON_LABEL[r] ?? r}</option>)}
@@ -749,7 +749,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
                     }`}
                   >
                     {/* Checkbox */}
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-4 py-3">
                       <input
                         type="checkbox"
                         checked={selected.has(r.id)}
@@ -812,7 +812,7 @@ export default function AdminReportsPanel({ onEditQuestion, onReportResolved, is
 
                     {/* Actions */}
                     <td className="px-4 py-3">
-                      <div className="flex gap-1 items-center flex-wrap" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex gap-1 items-center flex-wrap">
                         {r.status === "pending" && (
                           <button type="button" disabled={updating === r.id} onClick={() => setStatus(r.id, "reviewed")}
                             className="px-2.5 py-1 rounded text-xs font-semibold bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border border-blue-500/20 transition-colors disabled:opacity-40">

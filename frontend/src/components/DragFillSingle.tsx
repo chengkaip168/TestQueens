@@ -118,7 +118,7 @@ export default function DragFillSingle({
           onDragOver={isReadOnly ? undefined : e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={isReadOnly ? undefined : () => setDragOver(false)}
           onDrop={isReadOnly ? undefined : handleDrop}
-          className={`inline-flex items-center justify-center gap-1 mx-1.5 px-3 py-0.5 min-w-[108px] rounded-xl border-2 text-sm font-semibold align-middle transition-all duration-150
+          className={`inline-flex items-center justify-center gap-1 mx-1.5 px-3 py-0.5 min-w-[108px] rounded-xl border-2 text-sm font-semibold align-middle transition-colors duration-150
             ${!isReadOnly ? "cursor-pointer hover:shadow" : ""}
             ${blankCls}`}
         >
@@ -181,7 +181,7 @@ export default function DragFillSingle({
                   e.dataTransfer.effectAllowed = "move";
                 }}
                 onClick={() => handleTokenClick(letter)}
-                className={`px-4 py-2 rounded-2xl border-2 text-sm font-semibold select-none transition-all duration-150
+                className={`px-4 py-2 rounded-2xl border-2 text-sm font-semibold select-none transition-colors duration-150
                   ${isReadOnly
                     ? `${roClass} cursor-default`
                     : isPlaced

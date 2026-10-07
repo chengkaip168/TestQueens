@@ -122,7 +122,7 @@ export default function DragToBin({
                 draggable={!isReadOnly && !isPlaced}
                 onDragStart={e => { e.dataTransfer.setData("text/plain", String(idx)); e.dataTransfer.effectAllowed = "move"; }}
                 onClick={() => handleItemClick(idx)}
-                className={`px-3.5 py-1.5 rounded-2xl border-2 text-sm font-semibold select-none transition-all duration-150
+                className={`px-3.5 py-1.5 rounded-2xl border-2 text-sm font-semibold select-none transition-colors duration-150
                   ${isReadOnly
                     ? isCorrectPlaced
                       ? "bg-emerald-100 border-emerald-400 text-emerald-800 cursor-default"
@@ -159,7 +159,7 @@ export default function DragToBin({
               onDragOver={isReadOnly ? undefined : e => { e.preventDefault(); setDragOverBin(binIdx); }}
               onDragLeave={isReadOnly ? undefined : () => setDragOverBin(d => d === binIdx ? null : d)}
               onDrop={isReadOnly ? undefined : e => handleDrop(e, binIdx)}
-              className={`flex flex-col rounded-2xl border-2 overflow-hidden transition-all duration-150 min-h-[100px]
+              className={`flex flex-col rounded-2xl border-2 overflow-hidden transition-colors duration-150 min-h-[100px]
                 ${!isReadOnly && hasSelected ? "cursor-pointer" : ""}
                 ${isDragOver
                   ? "border-amber-400 bg-amber-50 scale-[1.02] shadow-md"
@@ -183,7 +183,7 @@ export default function DragToBin({
                     <div
                       key={idx}
                       onClick={e => { e.stopPropagation(); handleItemClick(idx); }}
-                      className={`px-2.5 py-1 rounded-xl border text-xs font-semibold transition-all
+                      className={`px-2.5 py-1 rounded-xl border text-xs font-semibold transition-colors
                         ${isReadOnly
                           ? isCorrect
                             ? "bg-emerald-100 border-emerald-400 text-emerald-800 cursor-default"

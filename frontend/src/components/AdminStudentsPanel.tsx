@@ -1916,7 +1916,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
                     aria-label="Toggle time limit"
                     aria-pressed={assignForm.timed}
                     onClick={() => setAssignForm(f => ({ ...f, timed: !f.timed }))}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${assignForm.timed ? "bg-amber-500" : "bg-zinc-200"}`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/40 ${assignForm.timed ? "bg-amber-500" : "bg-zinc-200"}`}
                   >
                     <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${assignForm.timed ? "translate-x-5.5" : "translate-x-0.5"}`} />
                   </button>
@@ -2186,7 +2186,7 @@ export default function AdminStudentsPanel({ isAdmin = true }: { isAdmin?: boole
                   value={profileForm.role}
                   onChange={e => setProfileForm(f => ({ ...f, role: e.target.value }))}
                   title="Role"
-                  className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-base text-zinc-900 focus:outline-none focus:border-amber-500/60 transition-colors"
+                  className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-base text-zinc-900 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/60 transition-colors"
                 >
                   <option value="student">Student</option>
                   <option value="parent">Parent</option>

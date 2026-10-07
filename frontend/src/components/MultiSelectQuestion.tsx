@@ -97,7 +97,7 @@ export default function MultiSelectQuestion({
               </span>
               <div className="flex-1 pt-0.5">
                 {image ? (
-                  <img src={image} alt={`Choice ${letter}`} className="max-h-16 h-auto" />
+                  <img src={image} alt={`Choice ${letter}`} loading="lazy" decoding="async" className="max-h-16 h-auto" />
                 ) : (
                   <span className={`text-sm leading-relaxed ${isSelected ? "text-blue-900" : "text-slate-700"}`}>
                     {parseFormattedText(stripChoicePrefix(label ?? ""))}

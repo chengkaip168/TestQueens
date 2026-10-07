@@ -110,7 +110,7 @@ function MCQuestion({
             </span>
             <div className="flex-1 pt-0.5">
               {choice.image ? (
-                <img src={choice.image} alt={`Choice ${choice.letter}`} className={`max-h-16 h-auto ${isEliminated ? "line-through" : ""}`} />
+                <img src={choice.image} alt={`Choice ${choice.letter}`} loading="lazy" decoding="async" className={`max-h-16 h-auto ${isEliminated ? "line-through" : ""}`} />
               ) : (
                 <span className={`text-sm leading-relaxed ${
                   isEliminated

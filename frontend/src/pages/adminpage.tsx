@@ -48,7 +48,7 @@ function NavItem({ label, active, onClick, icon, badge }: {
       type="button"
       onClick={onClick}
       title={label}
-      className={`flex items-center justify-center lg:justify-start gap-3 px-2 lg:px-3 py-2.5 rounded-lg text-base font-medium transition-all w-full text-left border ${
+      className={`flex items-center justify-center lg:justify-start gap-3 px-2 lg:px-3 py-2.5 rounded-lg text-base font-medium transition-colors w-full text-left border ${
         active
           ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
           : "text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 border-transparent"

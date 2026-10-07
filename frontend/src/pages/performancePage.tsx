@@ -306,7 +306,7 @@ function Bar({ pct, color }: { pct: number; color: string }) {
   useEffect(() => { if (ref.current) ref.current.style.width = `${Math.max(0, Math.min(100, pct))}%`; }, [pct]);
   return (
     <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-      <div ref={ref} className={`h-1.5 rounded-full transition-all duration-700 ${color}`} />
+      <div ref={ref} className={`h-1.5 rounded-full transition-colors duration-700 ${color}`} />
     </div>
   );
 }

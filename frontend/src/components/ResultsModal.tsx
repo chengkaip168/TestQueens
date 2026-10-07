@@ -12,7 +12,7 @@ import { SUBCAT_TW, SCORE_BAND_TW, fmtSubEN, type Lang } from "../utils/translat
 
 interface QuestionResult { id: string; order_index: number; is_correct: boolean | null; student_answer: string | null; sub_category: string | null; subject: string | null; time_spent?: number | null; }
 interface SelectedQuestion { uid: string; studentAnswer: string | null; isCorrect: boolean | null; questionNumber: number; }
-interface AIAnalysis { strengths: string[]; improvements: string[]; recommendations: string[]; }
+interface StudyNotes { strengths: string[]; improvements: string[]; recommendations: string[]; }
 interface TestInfo {
   test_name: string; created_at: string; total_questions: number;
   configuration: Record<string, { count: number }> | null;
@@ -134,7 +134,7 @@ function SectionBar({ label, correct, total, colorClass }: { label: string; corr
         <span className="text-zinc-500">{correct}/{total} · {pct}%</span>
       </div>
       <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all duration-700 ${colorClass}`} style={{ width: `${pct}%` }} />
+        <div className={`h-full rounded-full transition-colors duration-700 ${colorClass}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -250,7 +250,7 @@ function SHSATScoreCard({ score, t }: { score: SHSATScore; t: LangStrings }) {
                         </div>
                         <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-500 ${group.accent}`}
+                            className={`h-full rounded-full transition-colors duration-500 ${group.accent}`}
                             style={{ width: subBarPct(sub.score) }}
                           />
                         </div>
@@ -481,7 +481,7 @@ export default function ResultsModal({ testID, userID, studentName, onClose }: R
   }
   recommendations.push("Spend extra study time on the lower-scoring section, targeted practice yields faster gains than mixed review");
 
-  const analysis: AIAnalysis = { strengths, improvements, recommendations };
+  const analysis: StudyNotes = { strengths, improvements, recommendations };
 
   function handleExportPDF() {
     if (!test) return;
@@ -510,7 +510,7 @@ export default function ResultsModal({ testID, userID, studentName, onClose }: R
         labelColor: sl.color,
         subcategories: shsatScore.subcategories,
       } : undefined,
-      aiAnalysis: analysis ?? undefined,
+      studyNotes: analysis ?? undefined,
       questions: questions.map(q => ({
         orderIndex: q.order_index,
         isCorrect: q.is_correct,
